@@ -217,7 +217,9 @@ function MoneyInput({ label, value, onChange, prefix = "$", step = 100, required
           />
         ) : (
           <div
+            tabIndex={0}
             onClick={() => { setRaw(value === 0 ? "" : String(value)); setEditing(true); }}
+            onFocus={() => { setRaw(value === 0 ? "" : String(value)); setEditing(true); }}
             className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 cursor-text hover:border-blue-400 ${isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
           >
             {value === 0 ? <span className={isEmpty ? "text-red-400" : "text-slate-400"}>0</span> : fmt(value)}
@@ -240,7 +242,9 @@ function InlineMoney({ value, onChange, step = 1000, min = 0 }) {
       className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400" />
   );
   return (
-    <div onClick={() => { setRaw(value === 0 ? "" : String(value)); setEditing(true); }}
+    <div tabIndex={0}
+      onClick={() => { setRaw(value === 0 ? "" : String(value)); setEditing(true); }}
+      onFocus={() => { setRaw(value === 0 ? "" : String(value)); setEditing(true); }}
       className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-800 cursor-text hover:border-blue-400">
       {value === 0 ? <span className="text-slate-400">0</span> : fmt(value)}
     </div>
