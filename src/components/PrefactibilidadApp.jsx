@@ -621,7 +621,7 @@ export default function PrefactibilidadApp() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="max-w-5xl mx-auto px-4 pt-4">
+      <div className="tabs-container max-w-5xl mx-auto px-4 pt-4">
         <div className="no-print flex gap-1 mb-4">
           {tabs.map(t => (
             <button
@@ -639,7 +639,7 @@ export default function PrefactibilidadApp() {
         </div>
 
         {/* ═══ TAB: SUPUESTOS ═══ */}
-        <div className="print-section" style={{ display: tab === "supuestos" ? "block" : "none" }}>
+        <div className="print-section first-section" style={{ display: tab === "supuestos" ? "block" : "none" }}>
           <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span><span style={{marginLeft:"10px",fontSize:"8px",color:"#94a3b8"}}>Prefactibilidad Inmobiliaria v1.0</span></div><div className="project-info">{sup.proyecto && <><strong>{sup.proyecto}</strong> — {sup.ubicacion}<br/>{sup.fecha}</>}</div></div>
           <div className="space-y-4 pb-8">
             {/* Proyecto */}

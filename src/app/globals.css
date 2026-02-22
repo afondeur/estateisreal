@@ -83,8 +83,13 @@ input, select, textarea {
     display: block !important;
     page-break-before: always;
   }
-  .print-section:first-of-type {
-    page-break-before: avoid;
+  .print-section.first-section {
+    page-break-before: avoid !important;
+  }
+  /* Colapsar el contenedor de tabs en print */
+  .tabs-container {
+    padding: 0 !important;
+    margin: 0 !important;
   }
   .avoid-break {
     page-break-inside: avoid;
