@@ -6,7 +6,7 @@ export default function Navbar() {
   const { user, logout } = useAuth();
 
   return (
-    <nav className="bg-slate-900 text-white px-4 py-3 shadow-lg">
+    <nav className="no-print bg-slate-900 text-white px-4 py-3 shadow-lg">
       <div className="max-w-6xl mx-auto flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition">
           <span className="text-lg font-black tracking-widest" style={{ letterSpacing: "0.15em" }}>

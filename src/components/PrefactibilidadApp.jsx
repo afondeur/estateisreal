@@ -8,10 +8,10 @@ import { useState, useMemo, useCallback, useRef } from "react";
 // ═══════════════════════════════════════════════════════════
 
 const DEFAULT_MIX = [
-  { tipo: "1 Hab", qty: 0, m2: 65, precioUd: 104000 },
-  { tipo: "2 Hab", qty: 10, m2: 82, precioUd: 131200 },
-  { tipo: "3 Hab", qty: 10, m2: 93, precioUd: 148800 },
-  { tipo: "Penthouse", qty: 0, m2: 150, precioUd: 270000 },
+  { tipo: "Tipo 1", qty: 0, m2: 0, precioUd: 0 },
+  { tipo: "Tipo 2", qty: 0, m2: 0, precioUd: 0 },
+  { tipo: "Tipo 3", qty: 0, m2: 0, precioUd: 0 },
+  { tipo: "Tipo 4", qty: 0, m2: 0, precioUd: 0 },
   { tipo: "Tipo 5", qty: 0, m2: 0, precioUd: 0 },
   { tipo: "Tipo 6", qty: 0, m2: 0, precioUd: 0 },
 ];
@@ -22,14 +22,14 @@ const DEFAULT_THRESHOLDS = {
 };
 
 const DEFAULT_SUPUESTOS = {
-  proyecto: "Lilas I - B", ubicacion: "Santiago, RD", fecha: "2026-02-16",
-  areaTerreno: 1332, precioTerreno: 274857.20,
-  costoM2: 1000, softCosts: 0.025, devFee: 0, comisionVenta: 0.05, marketing: 0.003, contingencias: 0.02,
-  pctFinanciamiento: 0.75, tasaInteres: 0.13, drawFactor: 0.60, comisionBanco: 0,
-  mesesPredev: 6, mesesConstruccion: 18, mesesPostVenta: 6,
-  preventaPct: 0.75, cobroPct: 0.25,
-  equityCapital: 300000,
-  parqueosDisenados: 33, ratioResidente: 1.0, divisorVisita: 10, minUnidadesVisita: 10, pctDiscapacidad: 0.04,
+  proyecto: "", ubicacion: "", fecha: "",
+  areaTerreno: 0, precioTerreno: 0,
+  costoM2: 0, softCosts: 0, devFee: 0, comisionVenta: 0, marketing: 0, contingencias: 0,
+  pctFinanciamiento: 0, tasaInteres: 0, drawFactor: 0, comisionBanco: 0,
+  mesesPredev: 0, mesesConstruccion: 0, mesesPostVenta: 0,
+  preventaPct: 0, cobroPct: 0,
+  equityCapital: 0,
+  parqueosDisenados: 0, ratioResidente: 0, divisorVisita: 0, minUnidadesVisita: 0, pctDiscapacidad: 0,
 };
 
 const fmt = (n, dec = 0) => n == null || isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -563,9 +563,9 @@ export default function PrefactibilidadApp() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-900">
       {/* Header */}
-      <div className="bg-slate-800 text-white px-4 py-3">
+      <div className="no-print bg-slate-800 text-white px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -576,6 +576,13 @@ export default function PrefactibilidadApp() {
             <p className="text-xs text-slate-400">Análisis financiero rápido para proyectos inmobiliarios | v4.2</p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.print()}
+              className="no-print px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition"
+              title="Imprimir todas las secciones"
+            >
+              🖨️ Imprimir
+            </button>
             <div className="text-right">
               <div className="text-xs text-slate-400">{sup.proyecto}</div>
               <div className="text-xs text-slate-500">{sup.ubicacion}</div>
@@ -591,7 +598,7 @@ export default function PrefactibilidadApp() {
       </div>
 
       {/* Quick Metrics Bar */}
-      <div className="bg-white border-b border-slate-200 px-4 py-2">
+      <div className="no-print bg-slate-800 border-b border-slate-700 px-4 py-2">
         <div className="max-w-5xl mx-auto flex gap-6 text-xs overflow-x-auto">
           {[
             { l: "Ingreso Total", v: fmtUSD(r.ingresoTotal) },
@@ -604,7 +611,7 @@ export default function PrefactibilidadApp() {
           ].map(m => (
             <div key={m.l} className="whitespace-nowrap">
               <span className="text-slate-400">{m.l}: </span>
-              <span className="font-bold text-slate-700">{m.v}</span>
+              <span className="font-bold text-slate-200">{m.v}</span>
             </div>
           ))}
         </div>
@@ -612,7 +619,7 @@ export default function PrefactibilidadApp() {
 
       {/* Tab Navigation */}
       <div className="max-w-5xl mx-auto px-4 pt-4">
-        <div className="flex gap-1 mb-4">
+        <div className="no-print flex gap-1 mb-4">
           {tabs.map(t => (
             <button
               key={t.id}
@@ -620,7 +627,7 @@ export default function PrefactibilidadApp() {
               className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
                 tab === t.id
                   ? "bg-white text-slate-800 border border-b-0 border-slate-200 shadow-sm"
-                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
               }`}
             >
               {t.label}
@@ -629,7 +636,8 @@ export default function PrefactibilidadApp() {
         </div>
 
         {/* ═══ TAB: SUPUESTOS ═══ */}
-        {tab === "supuestos" && (
+        <div className="print-section" style={{ display: tab === "supuestos" ? "block" : "none" }}>
+          <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span></div><div style={{fontSize:"9px"}}><strong>{sup.proyecto}</strong> — {sup.ubicacion}</div></div>
           <div className="space-y-4 pb-8">
             {/* Proyecto */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
@@ -797,10 +805,11 @@ export default function PrefactibilidadApp() {
               </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* ═══ TAB: RESULTADOS ═══ */}
-        {tab === "resultados" && (
+        <div className="print-section" style={{ display: tab === "resultados" ? "block" : "none" }}>
+          <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span></div><div style={{fontSize:"9px"}}><strong>{sup.proyecto}</strong> — {sup.ubicacion}</div></div>
           <div className="space-y-4 pb-8">
             {/* Semáforo Principal */}
             <div className="rounded-xl p-6 text-center text-white shadow-lg" style={{ backgroundColor: r.decisionColor }}>
@@ -921,10 +930,11 @@ export default function PrefactibilidadApp() {
               </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* ═══ TAB: SENSIBILIDAD ═══ */}
-        {tab === "sensibilidad" && (
+        <div className="print-section" style={{ display: tab === "sensibilidad" ? "block" : "none" }}>
+          <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span></div><div style={{fontSize:"9px"}}><strong>{sup.proyecto}</strong> — {sup.ubicacion}</div></div>
           <div className="space-y-4 pb-8">
             <div className="bg-blue-50 rounded-lg border border-blue-200 p-3 text-sm text-blue-700">
               <div className="flex items-center justify-between gap-4">
@@ -1109,10 +1119,11 @@ export default function PrefactibilidadApp() {
               <p className="text-xs text-slate-500 mt-2 italic">A menor capital, mayor TIR (mayor apalancamiento) pero mayor riesgo financiero (LTV/LTC más altos). La fila resaltada en azul es el escenario base actual.</p>
             </div>
           </div>
-        )}
+        </div>
 
         {/* ═══ TAB: ESCENARIOS ═══ */}
-        {tab === "escenarios" && (
+        <div className="print-section" style={{ display: tab === "escenarios" ? "block" : "none" }}>
+          <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span></div><div style={{fontSize:"9px"}}><strong>{sup.proyecto}</strong> — {sup.ubicacion}</div></div>
           <div className="space-y-4 pb-8">
             {/* 5 Escenarios */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
@@ -1196,11 +1207,11 @@ export default function PrefactibilidadApp() {
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Footer */}
-      <div className="bg-slate-800 text-slate-400 text-xs text-center py-3 mt-8">
+      <div className="no-print bg-slate-800 text-slate-400 text-xs text-center py-3 mt-8">
         ESTATEisREAL — Prefactibilidad Inmobiliaria v1.0 | Motor de cálculo basado en metodología PE/VC | © Alejandro J. Fondeur M. 2026
       </div>
     </div>

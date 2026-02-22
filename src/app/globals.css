@@ -1,26 +1,59 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #0f172a;
+  --foreground: #e2e8f0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #0f172a;
+  color: #e2e8f0;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+input, select, textarea {
+  color: #1e293b !important;
+}
+
+/* ═══ PRINT STYLES ═══ */
+@media print {
+  body {
+    background: white !important;
+    color: #1e293b !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-section {
+    display: block !important;
+    page-break-before: always;
+  }
+  .print-section:first-of-type {
+    page-break-before: avoid;
+  }
+  .avoid-break {
+    page-break-inside: avoid;
+  }
+  .print-header-bar {
+    display: flex !important;
+    background: #1e293b !important;
+    color: white !important;
+    padding: 6px 12px;
+    margin: 0 0 8px 0;
+    border-radius: 4px;
+    justify-content: space-between;
+    align-items: center;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-header-bar .brand {
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.15em;
+  }
+  .print-header-bar .accent {
+    color: #60a5fa !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
