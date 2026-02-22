@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0f172a;
+  --background: #1e293b;
   --foreground: #e2e8f0;
 }
 
 body {
-  background: #0f172a;
+  background: #1e293b;
   color: #e2e8f0;
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -17,9 +17,15 @@ input, select, textarea {
 
 /* ═══ PRINT STYLES ═══ */
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
   body {
     background: white !important;
     color: #1e293b !important;
+    margin: 0;
+    padding: 0;
   }
   .no-print {
     display: none !important;
@@ -34,26 +40,38 @@ input, select, textarea {
   .avoid-break {
     page-break-inside: avoid;
   }
+  /* Forzar fondo blanco en todo el app container */
+  .min-h-screen {
+    background: white !important;
+    min-height: auto !important;
+  }
   .print-header-bar {
     display: flex !important;
     background: #1e293b !important;
     color: white !important;
-    padding: 6px 12px;
-    margin: 0 0 8px 0;
+    padding: 8px 14px;
+    margin: 0 0 12px 0;
     border-radius: 4px;
     justify-content: space-between;
     align-items: center;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
   }
   .print-header-bar .brand {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
     letter-spacing: 0.15em;
   }
   .print-header-bar .accent {
     color: #60a5fa !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  }
+  .print-header-bar .project-info {
+    font-size: 9px;
+    text-align: right;
+  }
+  /* Tarjetas blancas en print */
+  .bg-white {
+    background: white !important;
+  }
+  .bg-slate-50 {
+    background: #f8fafc !important;
   }
 }

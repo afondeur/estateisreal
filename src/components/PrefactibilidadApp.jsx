@@ -563,9 +563,9 @@ export default function PrefactibilidadApp() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-slate-800">
       {/* Header */}
-      <div className="no-print bg-slate-800 text-white px-4 py-3">
+      <div className="no-print bg-slate-900 text-white px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -598,7 +598,7 @@ export default function PrefactibilidadApp() {
       </div>
 
       {/* Quick Metrics Bar */}
-      <div className="no-print bg-slate-800 border-b border-slate-700 px-4 py-2">
+      <div className="no-print bg-slate-900 border-b border-slate-700 px-4 py-2">
         <div className="max-w-5xl mx-auto flex gap-6 text-xs overflow-x-auto">
           {[
             { l: "Ingreso Total", v: fmtUSD(r.ingresoTotal) },
@@ -637,7 +637,7 @@ export default function PrefactibilidadApp() {
 
         {/* ═══ TAB: SUPUESTOS ═══ */}
         <div className="print-section" style={{ display: tab === "supuestos" ? "block" : "none" }}>
-          <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span></div><div style={{fontSize:"9px"}}><strong>{sup.proyecto}</strong> — {sup.ubicacion}</div></div>
+          <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span><span style={{marginLeft:"10px",fontSize:"8px",color:"#94a3b8"}}>Prefactibilidad Inmobiliaria v1.0</span></div><div className="project-info">{sup.proyecto && <><strong>{sup.proyecto}</strong> — {sup.ubicacion}<br/>{sup.fecha}</>}</div></div>
           <div className="space-y-4 pb-8">
             {/* Proyecto */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
@@ -809,7 +809,7 @@ export default function PrefactibilidadApp() {
 
         {/* ═══ TAB: RESULTADOS ═══ */}
         <div className="print-section" style={{ display: tab === "resultados" ? "block" : "none" }}>
-          <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span></div><div style={{fontSize:"9px"}}><strong>{sup.proyecto}</strong> — {sup.ubicacion}</div></div>
+          <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span><span style={{marginLeft:"10px",fontSize:"8px",color:"#94a3b8"}}>Prefactibilidad Inmobiliaria v1.0</span></div><div className="project-info">{sup.proyecto && <><strong>{sup.proyecto}</strong> — {sup.ubicacion}<br/>{sup.fecha}</>}</div></div>
           <div className="space-y-4 pb-8">
             {/* Semáforo Principal */}
             <div className="rounded-xl p-6 text-center text-white shadow-lg" style={{ backgroundColor: r.decisionColor }}>
@@ -934,7 +934,7 @@ export default function PrefactibilidadApp() {
 
         {/* ═══ TAB: SENSIBILIDAD ═══ */}
         <div className="print-section" style={{ display: tab === "sensibilidad" ? "block" : "none" }}>
-          <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span></div><div style={{fontSize:"9px"}}><strong>{sup.proyecto}</strong> — {sup.ubicacion}</div></div>
+          <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span><span style={{marginLeft:"10px",fontSize:"8px",color:"#94a3b8"}}>Prefactibilidad Inmobiliaria v1.0</span></div><div className="project-info">{sup.proyecto && <><strong>{sup.proyecto}</strong> — {sup.ubicacion}<br/>{sup.fecha}</>}</div></div>
           <div className="space-y-4 pb-8">
             <div className="bg-blue-50 rounded-lg border border-blue-200 p-3 text-sm text-blue-700">
               <div className="flex items-center justify-between gap-4">
@@ -1123,7 +1123,7 @@ export default function PrefactibilidadApp() {
 
         {/* ═══ TAB: ESCENARIOS ═══ */}
         <div className="print-section" style={{ display: tab === "escenarios" ? "block" : "none" }}>
-          <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span></div><div style={{fontSize:"9px"}}><strong>{sup.proyecto}</strong> — {sup.ubicacion}</div></div>
+          <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span><span style={{marginLeft:"10px",fontSize:"8px",color:"#94a3b8"}}>Prefactibilidad Inmobiliaria v1.0</span></div><div className="project-info">{sup.proyecto && <><strong>{sup.proyecto}</strong> — {sup.ubicacion}<br/>{sup.fecha}</>}</div></div>
           <div className="space-y-4 pb-8">
             {/* 5 Escenarios */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
