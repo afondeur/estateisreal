@@ -933,28 +933,30 @@ export default function PrefactibilidadApp() {
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Usos — ¿En qué se necesita el dinero?</h4>
                   <div className="space-y-1.5 text-sm font-mono">
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Terreno</span><span>{fmtUSD(r.precioTerreno)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Construcción directa</span><span>{fmtUSD(r.costoConstruccion)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Costos blandos</span><span>{fmtUSD(r.costoSoft)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión inmobiliaria</span><span>{fmtUSD(r.costoComision)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Publicidad y mercadeo</span><span>{fmtUSD(r.costoMarketing)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Contingencias</span><span>{fmtUSD(r.costoContingencias)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Intereses bancarios</span><span>{fmtUSD(r.intereses)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión bancaria</span><span>{fmtUSD(r.comisionBancaria)}</span></div>
-                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL USOS</span><span>{fmtUSD(r.costoTotal)}</span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Terreno</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.precioTerreno / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.precioTerreno)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Construcción directa</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoConstruccion / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoConstruccion)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Costos blandos</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoSoft / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoSoft)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión inmobiliaria</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoComision / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoComision)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Publicidad y mercadeo</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoMarketing / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoMarketing)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Contingencias</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoContingencias / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoContingencias)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Intereses bancarios</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.intereses / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.intereses)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión bancaria</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.comisionBancaria / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.comisionBancaria)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL USOS</span><span className="flex gap-3"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(r.costoTotal)}</span></span></div>
                   </div>
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Fuentes — ¿De dónde sale el dinero?</h4>
+                  {(() => { const totalFuentes = r.equityTotal + r.prestamo + r.preventas + r.costoDevFee; return (
                   <div className="space-y-1.5 text-sm font-mono">
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio terreno</span><span>{fmtUSD(r.precioTerreno)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio capital</span><span>{fmtUSD(sup.equityCapital)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600 border-t border-slate-200 pt-1"><span className="font-semibold">Total equity (socios)</span><span className="font-semibold">{fmtUSD(r.equityTotal)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Préstamo bancario</span><span>{fmtUSD(r.prestamo)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Preventas cobradas en obra</span><span>{fmtUSD(r.preventas)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Fee desarrollador</span><span>{fmtUSD(r.costoDevFee)}</span></div>
-                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL FUENTES</span><span>{fmtUSD(r.equityTotal + r.prestamo + r.preventas + r.costoDevFee)}</span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio terreno</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.precioTerreno / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.precioTerreno)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio capital</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(sup.equityCapital / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(sup.equityCapital)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600 border-t border-slate-200 pt-1"><span className="font-semibold">Total equity (socios)</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right font-semibold">{totalFuentes > 0 ? fmtPct(r.equityTotal / totalFuentes) : "—"}</span><span className="w-24 text-right font-semibold">{fmtUSD(r.equityTotal)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Préstamo bancario</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.prestamo / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.prestamo)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Preventas cobradas en obra</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.preventas / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.preventas)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Fee desarrollador</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.costoDevFee / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoDevFee)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL FUENTES</span><span className="flex gap-3"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(totalFuentes)}</span></span></div>
                   </div>
+                  ); })()}
                 </div>
               </div>
             </div>
