@@ -13,7 +13,12 @@ const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
   : null;
 
 export async function POST(req) {
+  console.log("🔔 Webhook recibido");
+  console.log("Stripe configurado:", !!stripe);
+  console.log("Supabase configurado:", !!supabase);
+
   if (!stripe) {
+    console.error("❌ Stripe no configurado - falta STRIPE_SECRET_KEY");
     return Response.json({ error: "Stripe no configurado" }, { status: 503 });
   }
 
@@ -27,8 +32,9 @@ export async function POST(req) {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
+    console.log("✅ Firma webhook verificada. Tipo:", event.type);
   } catch (err) {
-    console.error("Webhook signature verification failed:", err.message);
+    console.error("❌ Webhook signature verification failed:", err.message);
     return Response.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -40,17 +46,38 @@ export async function POST(req) {
       const customerId = session.customer;
       const subscriptionId = session.subscription;
 
-      if (userId && supabase) {
-        await supabase
-          .from("profiles")
-          .update({
-            tier: "pro",
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
-          })
-          .eq("id", userId);
+      console.log("📦 checkout.session.completed:", {
+        userId,
+        email,
+        customerId,
+        subscriptionId,
+        hasSupabase: !!supabase,
+      });
 
-        console.log(`✅ Usuario ${email} actualizado a PRO`);
+      if (!userId) {
+        console.error("❌ No hay userId en metadata de la sesión");
+        break;
+      }
+
+      if (!supabase) {
+        console.error("❌ Supabase no configurado - falta SUPABASE_SERVICE_ROLE_KEY");
+        break;
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({
+          tier: "pro",
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscriptionId,
+        })
+        .eq("id", userId)
+        .select();
+
+      if (error) {
+        console.error("❌ Error actualizando perfil:", error);
+      } else {
+        console.log(`✅ Usuario ${email} actualizado a PRO. Rows:`, data?.length);
       }
       break;
     }
@@ -61,21 +88,25 @@ export async function POST(req) {
       const customerId = subscription.customer;
       const status = subscription.status;
 
+      console.log("📦 subscription event:", { customerId, status });
+
       if (supabase && customerId) {
         if (status === "canceled" || status === "unpaid" || status === "past_due") {
-          await supabase
+          const { error } = await supabase
             .from("profiles")
             .update({ tier: "free" })
             .eq("stripe_customer_id", customerId);
 
-          console.log(`⚠️ Suscripción ${status} para customer ${customerId} → free`);
+          if (error) console.error("❌ Error downgrade:", error);
+          else console.log(`⚠️ Suscripción ${status} → free`);
         } else if (status === "active") {
-          await supabase
+          const { error } = await supabase
             .from("profiles")
             .update({ tier: "pro" })
             .eq("stripe_customer_id", customerId);
 
-          console.log(`✅ Suscripción reactivada para customer ${customerId} → pro`);
+          if (error) console.error("❌ Error reactivación:", error);
+          else console.log(`✅ Suscripción reactivada → pro`);
         }
       }
       break;
@@ -88,6 +119,7 @@ export async function POST(req) {
     }
 
     default:
+      console.log("ℹ️ Evento no manejado:", event.type);
       break;
   }
 

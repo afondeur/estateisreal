@@ -10,18 +10,35 @@ function CuentaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showSuccess, setShowSuccess] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   // Refrescar perfil al volver de Stripe con ?success=true
   useEffect(() => {
     if (searchParams.get("success") === "true" && user) {
       setShowSuccess(true);
-      const refresh = async () => {
-        for (let i = 0; i < 5; i++) {
+      setVerifying(true);
+
+      const verifyAndRefresh = async () => {
+        // Paso 1: Llamar a verify-payment como respaldo del webhook
+        try {
+          await fetch("/api/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: user.email, userId: user.id }),
+          });
+        } catch (e) {
+          console.log("verify-payment fallback error:", e);
+        }
+
+        // Paso 2: Refrescar perfil varias veces para capturar la actualización
+        for (let i = 0; i < 6; i++) {
           await new Promise(r => setTimeout(r, 2000));
           await refreshProfile();
         }
+        setVerifying(false);
       };
-      refresh();
+
+      verifyAndRefresh();
     }
   }, [searchParams, user, refreshProfile]);
 
@@ -48,9 +65,18 @@ function CuentaContent() {
         <div className="max-w-2xl mx-auto space-y-6">
           <h1 className="text-2xl font-bold text-slate-100">Mi Cuenta</h1>
 
-          {showSuccess && (
+          {showSuccess && !isPremium && verifying && (
             <div className="bg-emerald-900/30 border border-emerald-600 rounded-xl p-4 text-center">
               <p className="text-emerald-300 font-bold">¡Pago completado! Tu cuenta se está actualizando a Pro...</p>
+              <div className="mt-2 flex justify-center">
+                <div className="animate-spin h-5 w-5 border-2 border-emerald-400 border-t-transparent rounded-full"></div>
+              </div>
+            </div>
+          )}
+
+          {showSuccess && isPremium && (
+            <div className="bg-emerald-900/30 border border-emerald-600 rounded-xl p-4 text-center">
+              <p className="text-emerald-300 font-bold">¡Bienvenido al plan Pro! Tu cuenta ya está activa.</p>
             </div>
           )}
 
