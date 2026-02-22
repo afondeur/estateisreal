@@ -24,7 +24,7 @@ export default function Navbar() {
                   tier === "pro" ? "bg-blue-600 text-white" :
                   "bg-slate-600 text-slate-300"
                 }`}>
-                  {isAdmin ? "ADMIN" : tier === "pro" ? "PRO" : "FREE"}
+                  {isAdmin ? "ADMIN" : tier === "pro" ? "PRO" : "GRATIS"}
                 </span>
                 <span className="text-sm text-slate-400">{profile?.nombre || user.email}</span>
                 <button onClick={logout} className="text-xs text-slate-500 hover:text-red-400 transition ml-2">Salir</button>

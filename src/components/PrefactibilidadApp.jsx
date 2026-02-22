@@ -1113,14 +1113,15 @@ export default function PrefactibilidadApp() {
                   <div className="text-4xl mb-3">🔒</div>
                   <h3 className="text-lg font-bold text-slate-800 mb-2">Tablas de Sensibilidad</h3>
                   <p className="text-sm text-slate-500 mb-4">Descubre cómo cambian tus resultados al variar costos, precios y condiciones del banco. Disponible en el plan Pro.</p>
-                  <a href="/pricing" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition text-sm">Upgrade a Pro — $25/mes</a>
+                  <a href="/pricing" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition text-sm">Cambiar a Pro — $25/mes</a>
                   <p className="text-xs text-slate-400 mt-3">7 tablas de sensibilidad 7x7 con semáforo visual</p>
+                  <button onClick={() => setTab("resultados")} className="mt-3 text-sm text-blue-600 hover:text-blue-500 font-medium transition">← Volver a Resultados</button>
                 </div>
               </div>
               <div className="space-y-4 pb-8 opacity-20 pointer-events-none select-none" style={{filter:"blur(4px)", maxHeight:"600px", overflow:"hidden"}}>
                 <div className="bg-blue-50 rounded-lg border border-blue-200 p-3 text-sm text-blue-700">
                   <div className="flex items-center justify-between gap-4">
-                    <div><strong>Contenido bloqueado</strong> — Upgrade a Pro para ver las tablas de sensibilidad completas.</div>
+                    <div><strong>Contenido bloqueado</strong> — Cambia a Pro para ver las tablas de sensibilidad completas.</div>
                   </div>
                 </div>
               </div>
@@ -1327,14 +1328,15 @@ export default function PrefactibilidadApp() {
                   <div className="text-4xl mb-3">🔒</div>
                   <h3 className="text-lg font-bold text-slate-800 mb-2">Escenarios de Mercado</h3>
                   <p className="text-sm text-slate-500 mb-4">Evalúa cómo se comporta tu proyecto en 5 escenarios diferentes: desde pesimista hasta optimista. Disponible en el plan Pro.</p>
-                  <a href="/pricing" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition text-sm">Upgrade a Pro — $25/mes</a>
+                  <a href="/pricing" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition text-sm">Cambiar a Pro — $25/mes</a>
                   <p className="text-xs text-slate-400 mt-3">5 escenarios + punto de equilibrio detallado</p>
+                  <button onClick={() => setTab("resultados")} className="mt-3 text-sm text-blue-600 hover:text-blue-500 font-medium transition">← Volver a Resultados</button>
                 </div>
               </div>
               <div className="space-y-4 pb-8 opacity-20 pointer-events-none select-none" style={{filter:"blur(4px)", maxHeight:"600px", overflow:"hidden"}}>
                 <div className="bg-blue-50 rounded-lg border border-blue-200 p-3 text-sm text-blue-700">
                   <div className="flex items-center justify-between gap-4">
-                    <div><strong>Contenido bloqueado</strong> — Upgrade a Pro para ver los escenarios de mercado completos.</div>
+                    <div><strong>Contenido bloqueado</strong> — Cambia a Pro para ver los escenarios de mercado completos.</div>
                   </div>
                 </div>
               </div>

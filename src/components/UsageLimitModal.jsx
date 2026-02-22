@@ -12,7 +12,7 @@ export default function UsageLimitModal({ onClose, analysisCount }) {
         </div>
         <h2 className="text-xl font-bold text-slate-800 mb-2">Llegaste a tu límite mensual</h2>
         <p className="text-slate-600 mb-2">Has usado <strong>{analysisCount} de 3</strong> análisis gratuitos este mes.</p>
-        <p className="text-sm text-slate-500 mb-6">Actualiza a Premium para análisis ilimitados, historial guardado y acceso a todas las funciones.</p>
+        <p className="text-sm text-slate-500 mb-6">Actualiza a Pro para análisis ilimitados, historial guardado y acceso a todas las funciones.</p>
         <div className="space-y-3">
           <Link href="/pricing" className="block w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl transition text-center">
             Ver Planes — desde $25/mes

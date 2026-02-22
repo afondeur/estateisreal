@@ -64,7 +64,7 @@ export default function CuentaPage() {
             <div className="flex items-center justify-between">
               <div>
                 <span className={`text-lg font-bold ${isPremium ? "text-blue-300" : "text-slate-100"}`}>
-                  {isAdmin ? "Administrador" : isPremium ? "Premium" : "Gratuito"}
+                  {isAdmin ? "Administrador" : isPremium ? "Pro" : "Gratuito"}
                 </span>
                 {!isPremium && (
                   <p className="text-sm text-slate-400 mt-1">Acceso básico a resultados</p>
@@ -74,18 +74,18 @@ export default function CuentaPage() {
                 )}
               </div>
               <span className={`px-3 py-1 rounded-full text-sm font-bold ${isPremium ? "bg-blue-600 text-white" : "bg-slate-600 text-slate-300"}`}>
-                {isAdmin ? "ADMIN" : isPremium ? "PRO" : "FREE"}
+                {isAdmin ? "ADMIN" : isPremium ? "PRO" : "GRATIS"}
               </span>
             </div>
           </div>
 
-          {/* CTA Upgrade */}
+          {/* CTA Cambiar a Premium */}
           {!isPremium && (
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 text-white text-center">
               <h3 className="text-lg font-bold mb-2">Desbloquea todo el potencial</h3>
               <p className="text-blue-100 text-sm mb-4">Tablas de sensibilidad, análisis de escenarios y PDF profesional sin marca.</p>
               <Link href="/pricing" className="inline-block bg-white text-blue-700 font-bold px-6 py-3 rounded-xl hover:bg-blue-50 transition">
-                Upgrade a Premium — $25/mes
+                Cambiar a Pro — $25/mes
               </Link>
             </div>
           )}
