@@ -4,10 +4,16 @@ import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 
-// Emails con acceso Premium automático (administradores)
+// Administradores: acceso total (admin + pro)
 const ADMIN_EMAILS = [
   "afondeur@gmail.com",
   "afondeur@merafondeur.com",
+];
+
+// Premium gratis: acceso pro sin funciones de admin
+const PREMIUM_EMAILS = [
+  "aalba@merafondeur.com",
+  "cgarcia@merafondeur.com",
 ];
 
 export function AuthProvider({ children }) {
@@ -64,11 +70,12 @@ export function AuthProvider({ children }) {
     if (error) return { error };
     // Actualizar perfil con nombre y empresa
     if (data.user) {
-      const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase().trim());
+      const emailLower = email.toLowerCase().trim();
+      const isPro = ADMIN_EMAILS.includes(emailLower) || PREMIUM_EMAILS.includes(emailLower);
       await supabase.from("profiles").update({
         nombre,
         empresa,
-        tier: isAdmin ? "pro" : "free",
+        tier: isPro ? "pro" : "free",
       }).eq("id", data.user.id);
     }
     return { data };
@@ -123,8 +130,10 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   // Tier del usuario
-  const tier = profile?.tier || "free";
-  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase().trim());
+  const emailLower = user?.email?.toLowerCase().trim() || "";
+  const isAdmin = ADMIN_EMAILS.includes(emailLower);
+  const isPremiumEmail = PREMIUM_EMAILS.includes(emailLower);
+  const tier = (isAdmin || isPremiumEmail) ? "pro" : (profile?.tier || "free");
 
   return (
     <AuthContext.Provider value={{
@@ -137,7 +146,7 @@ export function AuthProvider({ children }) {
       logout,
       trackEvent,
       saveFeedback,
-      tier: isAdmin ? "pro" : tier,
+      tier,
       isAdmin,
     }}>
       {children}

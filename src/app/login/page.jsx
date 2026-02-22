@@ -46,11 +46,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <span className="text-2xl font-black tracking-widest text-slate-800" style={{ letterSpacing: "0.15em" }}>
-              ESTATE<span className="text-blue-600">is</span>REAL
+            <span className="text-2xl font-black tracking-widest text-white" style={{ letterSpacing: "0.15em" }}>
+              ESTATE<span className="text-blue-400">is</span>REAL
             </span>
           </Link>
-          <p className="text-sm text-slate-500 mt-2">Inicia sesión en tu cuenta</p>
+          <p className="text-sm text-slate-400 mt-2">Inicia sesión en tu cuenta</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
