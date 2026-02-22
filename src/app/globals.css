@@ -53,6 +53,11 @@ input, select, textarea {
 .text-slate-600 { color: #475569 !important; }
 .text-slate-500 { color: #64748b !important; }
 
+/* Marca de agua oculta en pantalla */
+.print-watermark {
+  display: none !important;
+}
+
 /* ═══ PRINT STYLES ═══ */
 @media print {
   * {
@@ -161,4 +166,33 @@ input, select, textarea {
   .print-disclaimer {
     display: block !important;
   }
+  /* Marca de agua diagonal para usuarios free */
+  .print-watermark {
+    display: block !important;
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .print-watermark-text {
+    position: absolute;
+    width: 200%;
+    text-align: center;
+    font-size: 72px;
+    font-weight: 900;
+    color: rgba(148, 163, 184, 0.13);
+    letter-spacing: 0.15em;
+    transform: rotate(-35deg);
+    white-space: nowrap;
+    user-select: none;
+  }
+  .print-watermark-text:nth-child(1) { top: -5%; left: -30%; }
+  .print-watermark-text:nth-child(2) { top: 15%; left: -30%; }
+  .print-watermark-text:nth-child(3) { top: 38%; left: -30%; }
+  .print-watermark-text:nth-child(4) { top: 60%; left: -30%; }
+  .print-watermark-text:nth-child(5) { top: 82%; left: -30%; }
 }

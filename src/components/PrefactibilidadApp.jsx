@@ -714,6 +714,16 @@ export default function PrefactibilidadApp() {
 
   return (
     <div className="min-h-screen bg-slate-800">
+      {/* Marca de agua para usuarios free (solo visible en print) */}
+      {tier !== "pro" && (
+        <div className="print-watermark" aria-hidden="true">
+          <div className="print-watermark-text">VERSIÓN GRATUITA</div>
+          <div className="print-watermark-text">VERSIÓN GRATUITA</div>
+          <div className="print-watermark-text">VERSIÓN GRATUITA</div>
+          <div className="print-watermark-text">VERSIÓN GRATUITA</div>
+          <div className="print-watermark-text">VERSIÓN GRATUITA</div>
+        </div>
+      )}
       {/* Header */}
       <div className="no-print bg-slate-900 text-white px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
