@@ -34,7 +34,8 @@ const DEFAULT_SUPUESTOS = {
 
 const fmt = (n, dec = 0) => n == null || isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
 const fmtPct = (n, dec = 1) => n == null || isNaN(n) ? "—" : (n * 100).toFixed(dec) + "%";
-const fmtUSD = (n) => n == null || isNaN(n) ? "—" : "$" + fmt(n);
+const fmtMoney = (n) => n == null || isNaN(n) ? "—" : fmt(n);
+const fmtUSD = fmtMoney; // alias para compatibilidad
 
 function calcAll(sup, mix, thresholds) {
   // ─── INGRESOS ───
@@ -195,7 +196,7 @@ function InputField({ label, value, onChange, type = "number", step, suffix, pre
 }
 
 // Campo para montos grandes: muestra con comas (1,334,541) pero edita como número crudo
-function MoneyInput({ label, value, onChange, prefix = "$", step = 100, required }) {
+function MoneyInput({ label, value, onChange, prefix, step = 100, required }) {
   const [editing, setEditing] = useState(false);
   const [raw, setRaw] = useState("");
   const isEmpty = required && value === 0;
@@ -329,7 +330,7 @@ function SensTable({ title, data, rowLabel, colLabel, format, pctVar, metric, th
     if (format === "pct") return v > 0.15 ? "bg-emerald-200 text-emerald-800" : v > 0.08 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800";
     return v > 1.3 ? "bg-emerald-200 text-emerald-800" : v > 1.1 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800";
   };
-  const fmtB = fmtBase || ((v) => "$" + fmt(v));
+  const fmtB = fmtBase || ((v) => fmt(v));
   const colLbl = (s) => {
     const pctStr = s === 0 ? "" : (s > 0 ? " (+" : " (") + (s * pctVar * 100).toFixed(0) + "%)";
     if (baseColVal != null) {
@@ -516,7 +517,7 @@ export default function PrefactibilidadApp() {
     return {
       grid,
       rowLabels: ltcs.map((l, i) => i === 3 ? Math.round(l*100)+"% (Base)" : Math.round(l*100)+"%"),
-      colLabels: capitals.map((c, i) => i === 3 ? "$"+fmt(c/1000)+"K (Base)" : "$"+fmt(c/1000)+"K"),
+      colLabels: capitals.map((c, i) => i === 3 ? fmt(c/1000)+"K (Base)" : fmt(c/1000)+"K"),
     };
   }, [sup, r, pctVar]);
   const sensMoicFinanciamiento = useMemo(() => {
@@ -551,7 +552,7 @@ export default function PrefactibilidadApp() {
     return {
       grid,
       rowLabels: ltcs.map((l, i) => i === 3 ? Math.round(l*100)+"% (Base)" : Math.round(l*100)+"%"),
-      colLabels: capitals.map((c, i) => i === 3 ? "$"+fmt(c/1000)+"K (Base)" : "$"+fmt(c/1000)+"K"),
+      colLabels: capitals.map((c, i) => i === 3 ? fmt(c/1000)+"K (Base)" : fmt(c/1000)+"K"),
     };
   }, [sup, r, pctVar]);
   const sensEstructura = useMemo(() => {
@@ -703,7 +704,7 @@ export default function PrefactibilidadApp() {
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Precio / m² terreno</label>
                   <div className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded text-sm font-mono text-slate-700">
-                    ${fmt(r.precioTerrenoM2, 2)}
+                    {fmt(r.precioTerrenoM2, 2)}
                   </div>
                 </div>
               </div>
@@ -720,7 +721,7 @@ export default function PrefactibilidadApp() {
                       <th className="text-center p-2 bg-blue-50">Cantidad</th>
                       <th className="text-center p-2 bg-blue-50">m²/Ud</th>
                       <th className="text-center p-2 bg-blue-50">Precio/Ud</th>
-                      <th className="text-right p-2">USD/m²</th>
+                      <th className="text-right p-2">Precio/m²</th>
                       <th className="text-right p-2">Subtotal</th>
                     </tr>
                   </thead>
@@ -866,8 +867,8 @@ export default function PrefactibilidadApp() {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Métricas de Inversión</h3>
               <div className="grid grid-cols-4 gap-3">
-                <MetricCard label="ROI — Retorno sobre Inversión" value={r.roi} format="pct" threshold={thresholds.roiMin} highlight desc="Utilidad ÷ Costo total. Ganancia por cada $1 invertido." />
-                <MetricCard label="Margen Neto" value={r.margen} format="pct" threshold={thresholds.margenMin} highlight desc="Utilidad ÷ Ingreso. Cuánto queda de cada $1 vendido." />
+                <MetricCard label="ROI — Retorno sobre Inversión" value={r.roi} format="pct" threshold={thresholds.roiMin} highlight desc="Utilidad ÷ Costo total. Ganancia por cada unidad monetaria invertida." />
+                <MetricCard label="Margen Neto" value={r.margen} format="pct" threshold={thresholds.margenMin} highlight desc="Utilidad ÷ Ingreso. Cuánto queda de cada unidad monetaria vendida." />
                 <MetricCard label="MOIC — Múltiplo sobre Capital" value={r.moic} format="x" threshold={thresholds.moicMin} highlight desc="Veces que el socio recupera su inversión. >1x = ganancia." />
                 <MetricCard label="Incremento sobre Costo (Markup)" value={r.markup} format="x" threshold={thresholds.markupMin} highlight desc="Ingreso ÷ Costo total. Colchón sobre punto de equilibrio." />
                 <MetricCard label="TIR — Tasa Interna de Retorno" value={r.tir} format="pct" threshold={thresholds.tirMin} highlight desc="Retorno anualizado sobre equity. Comparable entre proyectos." />
@@ -885,9 +886,9 @@ export default function PrefactibilidadApp() {
                   <thead>
                     <tr className="bg-slate-100">
                       <th className="p-1.5 text-left text-slate-500">Concepto</th>
-                      <th className="p-1.5 text-right text-slate-500">USD Total</th>
-                      <th className="p-1.5 text-right text-slate-500">USD/Ud</th>
-                      <th className="p-1.5 text-right text-slate-500">USD/m²</th>
+                      <th className="p-1.5 text-right text-slate-500">Total</th>
+                      <th className="p-1.5 text-right text-slate-500">Por Ud</th>
+                      <th className="p-1.5 text-right text-slate-500">Por m²</th>
                       <th className="p-1.5 text-right text-slate-500">% Ingreso</th>
                     </tr>
                   </thead>
@@ -922,7 +923,7 @@ export default function PrefactibilidadApp() {
                           <td className={`p-1.5 text-left ${row.header ? "pt-2" : ""}`}>{row.l}</td>
                           <td className="p-1.5 text-right">{row.v != null ? fmtUSD(row.v) : ""}</td>
                           <td className="p-1.5 text-right">{perUd != null && !row.header ? fmtUSD(perUd) : ""}</td>
-                          <td className="p-1.5 text-right">{perM2 != null && !row.header ? "$" + fmt(perM2, 0) : ""}</td>
+                          <td className="p-1.5 text-right">{perM2 != null && !row.header ? fmt(perM2, 0) : ""}</td>
                           <td className="p-1.5 text-right">{pctIng != null && !row.header ? fmtPct(pctIng) : ""}</td>
                         </tr>
                       );
