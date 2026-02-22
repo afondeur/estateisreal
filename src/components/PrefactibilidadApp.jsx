@@ -661,8 +661,8 @@ export default function PrefactibilidadApp() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="tabs-container max-w-5xl mx-auto px-4 pt-4">
-        <div className="no-print flex gap-1 mb-4">
+      <div className="no-print max-w-5xl mx-auto px-4 pt-4">
+        <div className="flex gap-1 mb-4">
           {tabs.map(t => (
             <button
               key={t.id}
@@ -677,9 +677,11 @@ export default function PrefactibilidadApp() {
             </button>
           ))}
         </div>
+      </div>
 
+      <div className="print-content max-w-5xl mx-auto px-4">
         {/* ═══ TAB: SUPUESTOS ═══ */}
-        <div className="print-section first-section" style={{ display: tab === "supuestos" ? "block" : "none" }}>
+        <div className="print-section" style={{ display: tab === "supuestos" ? "block" : "none" }}>
           <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span><span style={{marginLeft:"10px",fontSize:"8px",color:"#94a3b8"}}>Prefactibilidad Inmobiliaria v1.0</span></div><div className="project-info">{sup.proyecto && <><strong>{sup.proyecto}</strong> — {sup.ubicacion}<br/>{sup.fecha}</>}</div></div>
           <div className="space-y-4 pb-8">
             {/* Proyecto */}
@@ -756,7 +758,7 @@ export default function PrefactibilidadApp() {
                 <PctField label="Costos blandos (% del ingreso total)" value={sup.softCosts} onChange={v => updateSup("softCosts", v)} step={0.5} required />
                 <PctField label="Comisión inmobiliaria (% del ingreso)" value={sup.comisionVenta} onChange={v => updateSup("comisionVenta", v)} step={0.5} required />
                 <PctField label="Publicidad y mercadeo (% del ingreso)" value={sup.marketing} onChange={v => updateSup("marketing", v)} step={0.1} required />
-                <PctField label="Contingencias (% del costo de construcción)" value={sup.contingencias} onChange={v => updateSup("contingencias", v)} step={0.5} required />
+                <PctField label="Contingencias (% del costo de construcción)" value={sup.contingencias} onChange={v => updateSup("contingencias", v)} step={0.5} />
                 <PctField label="Fee del desarrollador (% del ingreso)" value={sup.devFee} onChange={v => updateSup("devFee", v)} step={0.5} />
               </div>
             </div>
