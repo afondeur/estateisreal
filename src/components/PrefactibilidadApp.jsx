@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useRef } from "react";
+import { useAuth } from "../context/AuthContext";
 
 // ═══════════════════════════════════════════════════════════
 // HERRAMIENTA DE PREFACTIBILIDAD INMOBILIARIA v1.0
@@ -403,6 +404,7 @@ function PrintDisclaimer() {
 // ═══════════════════════════════════════════════
 
 export default function PrefactibilidadApp() {
+  const { trackEvent, saveFeedback: saveFeedbackToDb } = useAuth();
   const [sup, setSup] = useState(DEFAULT_SUPUESTOS);
   const [mix, setMix] = useState(DEFAULT_MIX);
   const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
@@ -460,7 +462,9 @@ export default function PrefactibilidadApp() {
     }
     setValidationErrors([]);
     setTab("resultados");
-  }, [validateFields]);
+    // Tracking: análisis generado
+    trackEvent("analisis_generado", { proyecto: sup.proyecto });
+  }, [validateFields, trackEvent, sup.proyecto]);
 
   // Imprimir con feedback
   const handlePrint = useCallback(() => {
@@ -471,19 +475,25 @@ export default function PrefactibilidadApp() {
     }
   }, [feedbackSent]);
 
-  const submitFeedbackAndPrint = useCallback(() => {
-    // En el futuro, aquí envías feedback a un backend/analytics
-    console.log("Feedback:", { feedback1, feedback2, proyecto: sup.proyecto });
+  const submitFeedbackAndPrint = useCallback(async () => {
+    // Guardar feedback en Supabase
+    try {
+      await saveFeedbackToDb(sup.proyecto || "Sin nombre", feedback1, feedback2);
+      await trackEvent("feedback_submitted", { proyecto: sup.proyecto, feedback1, feedback2 });
+    } catch (e) {
+      console.log("Error guardando feedback:", e);
+    }
     setFeedbackSent(true);
     setShowFeedback(false);
     setTimeout(() => window.print(), 300);
-  }, [feedback1, feedback2, sup.proyecto]);
+  }, [feedback1, feedback2, sup.proyecto, saveFeedbackToDb, trackEvent]);
 
   const skipFeedbackAndPrint = useCallback(() => {
     setFeedbackSent(true);
     setShowFeedback(false);
+    trackEvent("feedback_skipped", { proyecto: sup.proyecto });
     setTimeout(() => window.print(), 300);
-  }, []);
+  }, [trackEvent, sup.proyecto]);
 
   const r = useMemo(() => calcAll(sup, mix, thresholds), [sup, mix, thresholds]);
 

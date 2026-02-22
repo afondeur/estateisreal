@@ -1,80 +1,133 @@
 "use client";
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 
+// Emails con acceso Premium automático (administradores)
+const ADMIN_EMAILS = [
+  "afondeur@gmail.com",
+  "afondeur@merafondeur.com",
+];
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [analysisCount, setAnalysisCount] = useState(0);
+
+  async function fetchProfile(userId) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    if (data) setProfile(data);
+    return data;
+  }
 
   useEffect(() => {
-    const saved = localStorage.getItem("eir_user");
-    if (saved) {
-      try { setUser(JSON.parse(saved)); } catch {}
-    }
-    const count = localStorage.getItem("eir_analysis_count");
-    const month = localStorage.getItem("eir_analysis_month");
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${now.getMonth()}`;
-    if (month === currentMonth && count) {
-      setAnalysisCount(parseInt(count) || 0);
-    } else {
-      localStorage.setItem("eir_analysis_month", currentMonth);
-      localStorage.setItem("eir_analysis_count", "0");
-      setAnalysisCount(0);
-    }
-    setLoading(false);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) fetchProfile(u.id);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) fetchProfile(u.id);
+      else setProfile(null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Emails con acceso Premium automático (administradores)
-  const ADMIN_EMAILS = [
-    "afondeur@gmail.com",
-    "afondeur@merafondeur.com",
-  ];
+  // Login con email + password
+  const login = useCallback(async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error };
+    return { data };
+  }, []);
 
-  const login = (email, name) => {
-    const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase().trim());
-    const u = { email, name, plan: isAdmin ? "premium" : "free", createdAt: new Date().toISOString() };
-    setUser(u);
-    localStorage.setItem("eir_user", JSON.stringify(u));
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("eir_user");
-  };
-
-  const upgradePlan = () => {
-    if (!user) return;
-    const updated = { ...user, plan: "premium" };
-    setUser(updated);
-    localStorage.setItem("eir_user", JSON.stringify(updated));
-  };
-
-  const incrementAnalysis = () => {
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${now.getMonth()}`;
-    const savedMonth = localStorage.getItem("eir_analysis_month");
-    let newCount;
-    if (savedMonth !== currentMonth) {
-      newCount = 1;
-      localStorage.setItem("eir_analysis_month", currentMonth);
-    } else {
-      newCount = analysisCount + 1;
+  // Registro con email + password + nombre
+  const signUp = useCallback(async (email, password, nombre, empresa) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return { error };
+    // Actualizar perfil con nombre y empresa
+    if (data.user) {
+      const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase().trim());
+      await supabase.from("profiles").update({
+        nombre,
+        empresa,
+        tier: isAdmin ? "pro" : "free",
+      }).eq("id", data.user.id);
     }
-    setAnalysisCount(newCount);
-    localStorage.setItem("eir_analysis_count", String(newCount));
-  };
+    return { data };
+  }, []);
 
-  const canAnalyze = () => {
-    if (!user) return true;
-    if (user.plan === "premium") return true;
-    return analysisCount < 3;
-  };
+  // Login con Google
+  const loginWithGoogle = useCallback(async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    return { data, error };
+  }, []);
+
+  // Logout
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+  }, []);
+
+  // Tracking de eventos
+  const trackEvent = useCallback(async (eventType, eventData = {}) => {
+    try {
+      await supabase.from("analytics_events").insert({
+        user_id: user?.id || null,
+        event_type: eventType,
+        event_data: eventData,
+      });
+    } catch (e) {
+      console.log("Track event error:", e);
+    }
+  }, [user]);
+
+  // Guardar feedback
+  const saveFeedback = useCallback(async (proyecto, pregunta1, pregunta2) => {
+    try {
+      await supabase.from("feedback").insert({
+        user_id: user?.id || null,
+        email: user?.email || null,
+        proyecto,
+        pregunta_1: pregunta1,
+        pregunta_2: pregunta2,
+      });
+    } catch (e) {
+      console.log("Save feedback error:", e);
+    }
+  }, [user]);
+
+  // Tier del usuario
+  const tier = profile?.tier || "free";
+  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase().trim());
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, upgradePlan, analysisCount, incrementAnalysis, canAnalyze }}>
+    <AuthContext.Provider value={{
+      user,
+      profile,
+      loading,
+      login,
+      signUp,
+      loginWithGoogle,
+      logout,
+      trackEvent,
+      saveFeedback,
+      tier: isAdmin ? "pro" : tier,
+      isAdmin,
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -6,23 +6,60 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function RegistroPage() {
   const [name, setName] = useState("");
+  const [empresa, setEmpresa] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { login } = useAuth();
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { signUp, loginWithGoogle } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !email) { setError("Completa todos los campos"); return; }
-    login(email, name);
-    router.push("/");
+    setError("");
+    if (!name || !email || !password) { setError("Completa todos los campos obligatorios"); return; }
+    if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
+    setLoading(true);
+    const { error: authError } = await signUp(email, password, name, empresa);
+    setLoading(false);
+    if (authError) {
+      if (authError.message?.includes("already registered")) {
+        setError("Este correo ya tiene una cuenta. Intenta iniciar sesión.");
+      } else {
+        setError(authError.message || "Error al crear la cuenta");
+      }
+      return;
+    }
+    setSuccess(true);
   };
 
-  const handleGoogle = () => {
-    login("usuario@gmail.com", "Usuario Google");
-    router.push("/");
+  const handleGoogle = async () => {
+    const { error: authError } = await loginWithGoogle();
+    if (authError) {
+      setError("Error al conectar con Google. Intenta de nuevo.");
+    }
   };
+
+  if (success) {
+    return (
+      <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 text-center">
+            <div className="text-4xl mb-4">📧</div>
+            <h2 className="text-xl font-bold text-slate-800 mb-2">Revisa tu correo</h2>
+            <p className="text-slate-500 text-sm mb-4">
+              Te enviamos un enlace de confirmación a <strong>{email}</strong>.
+              Haz clic en el enlace para activar tu cuenta.
+            </p>
+            <Link href="/login" className="text-blue-600 hover:text-blue-500 font-medium text-sm">
+              Ir a Iniciar Sesión
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4">
@@ -55,18 +92,24 @@ export default function RegistroPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">{error}</div>}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre completo</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre completo *</label>
               <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Juan Pérez" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Correo electrónico</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Empresa <span className="text-slate-400">(opcional)</span></label>
+              <input type="text" value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Mi Empresa S.R.L." />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Correo electrónico *</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="tu@correo.com" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Mínimo 8 caracteres" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña *</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Mínimo 6 caracteres" />
             </div>
-            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition">Crear Cuenta Gratuita</button>
+            <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-400 text-white font-bold py-3 rounded-xl transition">
+              {loading ? "Creando cuenta..." : "Crear Cuenta Gratuita"}
+            </button>
           </form>
 
           <p className="text-xs text-slate-400 text-center mt-4">Al registrarte aceptas los Términos de Servicio y Política de Privacidad.</p>

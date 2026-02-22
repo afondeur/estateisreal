@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
+import GoogleAnalytics from "../components/GoogleAnalytics";
 
 export const metadata: Metadata = {
   title: "ESTATEisREAL — Prefactibilidad Inmobiliaria",
@@ -15,6 +16,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="antialiased">
+        <GoogleAnalytics />
         <AuthProvider>
           {children}
         </AuthProvider>

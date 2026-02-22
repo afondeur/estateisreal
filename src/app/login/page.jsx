@@ -8,19 +8,37 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { login } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { login, loginWithGoogle } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     if (!email) { setError("Ingresa tu correo electrónico"); return; }
-    login(email, email.split("@")[0]);
+    if (!password) { setError("Ingresa tu contraseña"); return; }
+    if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
+    setLoading(true);
+    const { error: authError } = await login(email, password);
+    setLoading(false);
+    if (authError) {
+      if (authError.message?.includes("Invalid login")) {
+        setError("Correo o contraseña incorrectos");
+      } else if (authError.message?.includes("Email not confirmed")) {
+        setError("Revisa tu correo para confirmar tu cuenta antes de iniciar sesión");
+      } else {
+        setError(authError.message || "Error al iniciar sesión");
+      }
+      return;
+    }
     router.push("/");
   };
 
-  const handleGoogle = () => {
-    login("usuario@gmail.com", "Usuario Google");
-    router.push("/");
+  const handleGoogle = async () => {
+    const { error: authError } = await loginWithGoogle();
+    if (authError) {
+      setError("Error al conectar con Google. Intenta de nuevo.");
+    }
   };
 
   return (
@@ -61,7 +79,9 @@ export default function LoginPage() {
               <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="••••••••" />
             </div>
-            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition">Iniciar Sesión</button>
+            <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-400 text-white font-bold py-3 rounded-xl transition">
+              {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+            </button>
           </form>
 
           <p className="text-center text-sm text-slate-500 mt-6">
