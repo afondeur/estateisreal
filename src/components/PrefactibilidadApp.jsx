@@ -407,11 +407,83 @@ export default function PrefactibilidadApp() {
   const [mix, setMix] = useState(DEFAULT_MIX);
   const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
   const [tab, setTab] = useState("supuestos");
-  const [pctVar, setPctVar] = useState(0.05); // Factor de variación para sensibilidad (5%)
+  const [pctVar, setPctVar] = useState(0.05);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [feedback1, setFeedback1] = useState("");
+  const [feedback2, setFeedback2] = useState("");
+  const [validationErrors, setValidationErrors] = useState([]);
 
   const updateSup = useCallback((key, val) => setSup(prev => ({ ...prev, [key]: val })), []);
   const updateMix = useCallback((idx, key, val) => setMix(prev => prev.map((u, i) => i === idx ? { ...u, [key]: val } : u)), []);
   const updateThresh = useCallback((key, val) => setThresholds(prev => ({ ...prev, [key]: val })), []);
+
+  // Validación de campos obligatorios
+  const validateFields = useCallback(() => {
+    const errors = [];
+    const requiredSup = [
+      { key: "proyecto", label: "Nombre del proyecto" },
+      { key: "ubicacion", label: "Ubicación" },
+      { key: "fecha", label: "Fecha" },
+      { key: "areaTerreno", label: "Área del terreno" },
+      { key: "precioTerreno", label: "Precio del terreno" },
+      { key: "costoM2", label: "Costo de construcción por m²" },
+      { key: "softCosts", label: "Costos blandos" },
+      { key: "comisionVenta", label: "Comisión inmobiliaria" },
+      { key: "pctFinanciamiento", label: "% financiamiento" },
+      { key: "tasaInteres", label: "Tasa de interés" },
+      { key: "drawFactor", label: "Draw factor" },
+      { key: "mesesPredev", label: "Meses de pre-desarrollo" },
+      { key: "mesesConstruccion", label: "Meses de construcción" },
+      { key: "mesesPostVenta", label: "Meses de entrega" },
+      { key: "preventaPct", label: "% preventas" },
+      { key: "cobroPct", label: "% cobro antes de entrega" },
+      { key: "equityCapital", label: "Aporte del socio capitalista" },
+    ];
+    requiredSup.forEach(({ key, label }) => {
+      const v = sup[key];
+      if (v === 0 || v === "" || v == null) errors.push(label);
+    });
+    if (!mix.some(u => u.qty > 0 && u.m2 > 0 && u.precioUd > 0)) {
+      errors.push("Mix de producto (mínimo 1 línea completa)");
+    }
+    return errors;
+  }, [sup, mix]);
+
+  // Generar Análisis
+  const handleGenerar = useCallback(() => {
+    const errors = validateFields();
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    setValidationErrors([]);
+    setTab("resultados");
+  }, [validateFields]);
+
+  // Imprimir con feedback
+  const handlePrint = useCallback(() => {
+    if (feedbackSent) {
+      window.print();
+    } else {
+      setShowFeedback(true);
+    }
+  }, [feedbackSent]);
+
+  const submitFeedbackAndPrint = useCallback(() => {
+    // En el futuro, aquí envías feedback a un backend/analytics
+    console.log("Feedback:", { feedback1, feedback2, proyecto: sup.proyecto });
+    setFeedbackSent(true);
+    setShowFeedback(false);
+    setTimeout(() => window.print(), 300);
+  }, [feedback1, feedback2, sup.proyecto]);
+
+  const skipFeedbackAndPrint = useCallback(() => {
+    setFeedbackSent(true);
+    setShowFeedback(false);
+    setTimeout(() => window.print(), 300);
+  }, []);
 
   const r = useMemo(() => calcAll(sup, mix, thresholds), [sup, mix, thresholds]);
 
@@ -621,11 +693,11 @@ export default function PrefactibilidadApp() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => window.print()}
+              onClick={handlePrint}
               className="no-print px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition"
               title="Imprimir todas las secciones"
             >
-              🖨️ Imprimir
+              Imprimir
             </button>
             <div className="text-right">
               <div className="text-xs text-slate-400">{sup.proyecto}</div>
@@ -685,6 +757,15 @@ export default function PrefactibilidadApp() {
         <div className="print-section" style={{ display: tab === "supuestos" ? "block" : "none" }}>
           <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span><span style={{marginLeft:"10px",fontSize:"8px",color:"#94a3b8"}}>Prefactibilidad Inmobiliaria v1.0</span></div><div className="project-info">{sup.proyecto && <><strong>{sup.proyecto}</strong> — {sup.ubicacion}<br/>{sup.fecha}</>}</div></div>
           <div className="space-y-4 pb-8">
+            {/* Errores de validación */}
+            {validationErrors.length > 0 && (
+              <div className="no-print bg-red-50 border-2 border-red-400 rounded-lg p-4">
+                <h4 className="text-sm font-bold text-red-700 mb-2">Campos obligatorios sin completar:</h4>
+                <ul className="text-sm text-red-600 space-y-1">
+                  {validationErrors.map((e, i) => <li key={i}>• {e}</li>)}
+                </ul>
+              </div>
+            )}
             {/* Proyecto */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Proyecto</h3>
@@ -758,7 +839,7 @@ export default function PrefactibilidadApp() {
                 <MoneyInput label="Costo de construcción por m² vendible" value={sup.costoM2} onChange={v => updateSup("costoM2", v)} step={50} required />
                 <PctField label="Costos blandos (% del ingreso total)" value={sup.softCosts} onChange={v => updateSup("softCosts", v)} step={0.5} required />
                 <PctField label="Comisión inmobiliaria (% del ingreso)" value={sup.comisionVenta} onChange={v => updateSup("comisionVenta", v)} step={0.5} required />
-                <PctField label="Publicidad y mercadeo (% del ingreso)" value={sup.marketing} onChange={v => updateSup("marketing", v)} step={0.1} required />
+                <PctField label="Publicidad y mercadeo (% del ingreso)" value={sup.marketing} onChange={v => updateSup("marketing", v)} step={0.1} />
                 <PctField label="Contingencias (% del costo de construcción)" value={sup.contingencias} onChange={v => updateSup("contingencias", v)} step={0.5} />
                 <PctField label="Fee del desarrollador (% del ingreso)" value={sup.devFee} onChange={v => updateSup("devFee", v)} step={0.5} />
               </div>
@@ -849,6 +930,17 @@ export default function PrefactibilidadApp() {
                 <PctField label="LTC máximo (préstamo/costo)" value={thresholds.ltcMax} onChange={v => updateThresh("ltcMax", v)} step={1} />
               </div>
             </div>
+
+            {/* Botón Generar Análisis */}
+            <div className="no-print flex justify-center pt-2 pb-4">
+              <button
+                onClick={handleGenerar}
+                className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white text-lg font-bold rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95"
+              >
+                Generar Análisis
+              </button>
+            </div>
+
           <PrintDisclaimer />
           </div>
         </div>
@@ -1286,6 +1378,55 @@ export default function PrefactibilidadApp() {
       <div className="no-print bg-slate-800 text-slate-400 text-xs text-center py-3 mt-8">
         ESTATEisREAL — Prefactibilidad Inmobiliaria v1.0 | Motor de cálculo basado en metodología PE/VC | © Alejandro J. Fondeur M. 2026
       </div>
+
+      {/* Modal de Feedback antes de imprimir */}
+      {showFeedback && (
+        <div className="no-print fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
+            <div className="text-center mb-5">
+              <span className="text-base font-black tracking-widest text-slate-800" style={{letterSpacing:"0.15em"}}>ESTATE<span className="text-blue-500">is</span>REAL</span>
+              <p className="text-sm text-slate-500 mt-2">Antes de imprimir, ayúdanos con 2 preguntas rápidas para mejorar la herramienta.</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">1. ¿Qué tan útil te resultó este análisis?</label>
+                <div className="flex gap-2">
+                  {["Muy útil", "Útil", "Regular", "Poco útil"].map(opt => (
+                    <button key={opt} onClick={() => setFeedback1(opt)}
+                      className={`flex-1 px-2 py-2 text-xs rounded-lg border transition ${feedback1 === opt ? "bg-blue-600 text-white border-blue-600" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">2. ¿Qué te gustaría que agregáramos?</label>
+                <div className="flex flex-wrap gap-2">
+                  {["Flujo de caja mensual", "Comparar proyectos", "Gráficos visuales", "Más escenarios", "Otro"].map(opt => (
+                    <button key={opt} onClick={() => setFeedback2(opt)}
+                      className={`px-3 py-2 text-xs rounded-lg border transition ${feedback2 === opt ? "bg-blue-600 text-white border-blue-600" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button onClick={skipFeedbackAndPrint}
+                className="flex-1 px-4 py-2.5 text-sm text-slate-500 hover:text-slate-700 border border-slate-200 rounded-lg transition">
+                Omitir
+              </button>
+              <button onClick={submitFeedbackAndPrint}
+                className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition">
+                Enviar e Imprimir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
