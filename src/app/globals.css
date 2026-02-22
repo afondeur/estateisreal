@@ -90,12 +90,28 @@ input, select, textarea {
     page-break-before: always;
   }
   .print-section.first-section {
-    page-break-before: avoid !important;
+    page-break-before: auto !important;
+    break-before: auto !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
   }
   /* Colapsar el contenedor de tabs en print */
   .tabs-container {
     padding: 0 !important;
     margin: 0 !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: visible !important;
+    line-height: 0 !important;
+    font-size: 0 !important;
+    border: none !important;
+  }
+  /* El wrapper principal tampoco debe ocupar espacio */
+  .min-h-screen > .no-print {
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
   }
   .avoid-break {
     page-break-inside: avoid;
