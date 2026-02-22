@@ -2,44 +2,19 @@
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import PrefactibilidadApp from "../components/PrefactibilidadApp";
-import UsageLimitModal from "../components/UsageLimitModal";
 import { useAuth } from "../context/AuthContext";
 
 export default function Home() {
-  const { user, analysisCount, incrementAnalysis, canAnalyze } = useAuth();
-  const [showLimitModal, setShowLimitModal] = useState(false);
+  const { user, tier } = useAuth();
   const [analysisStarted, setAnalysisStarted] = useState(false);
 
   const handleStartAnalysis = () => {
-    if (!canAnalyze()) {
-      setShowLimitModal(true);
-      return;
-    }
-    if (!analysisStarted && user) {
-      incrementAnalysis();
-    }
     setAnalysisStarted(true);
   };
 
   return (
     <div className="min-h-screen bg-slate-800">
       <Navbar />
-
-      {/* Usage bar for logged-in free users */}
-      {user && user.plan === "free" && (
-        <div className="bg-slate-800 border-b border-slate-700 px-4 py-2">
-          <div className="max-w-5xl mx-auto flex items-center justify-between text-sm">
-            <span className="text-blue-300">
-              Análisis usados este mes: <strong>{analysisCount}/3</strong>
-            </span>
-            {analysisCount >= 3 && (
-              <a href="/pricing" className="text-blue-400 font-medium hover:text-blue-300">
-                Upgrade a Premium →
-              </a>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Main content */}
       {!analysisStarted ? (
@@ -86,14 +61,6 @@ export default function Home() {
         </div>
       ) : (
         <PrefactibilidadApp />
-      )}
-
-      {/* Limit Modal */}
-      {showLimitModal && (
-        <UsageLimitModal
-          onClose={() => setShowLimitModal(false)}
-          analysisCount={analysisCount}
-        />
       )}
     </div>
   );
