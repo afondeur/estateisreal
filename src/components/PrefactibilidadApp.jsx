@@ -179,10 +179,11 @@ function InputField({ label, value, onChange, type = "number", step, suffix, pre
           type={type}
           value={value}
           onChange={e => onChange(type === "number" ? parseFloat(e.target.value) || 0 : e.target.value)}
+          onFocus={e => e.target.select()}
           step={step}
           min={min}
           max={max}
-          className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+          className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
         />
         {suffix && <span className="text-sm text-slate-400 whitespace-nowrap">{suffix}</span>}
       </div>
@@ -205,14 +206,15 @@ function MoneyInput({ label, value, onChange, prefix = "$", step = 100 }) {
             autoFocus
             value={raw}
             onChange={e => { setRaw(e.target.value); onChange(parseFloat(e.target.value) || 0); }}
+            onFocus={e => e.target.select()}
             onBlur={() => setEditing(false)}
             step={step}
-            className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+            className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
           />
         ) : (
           <div
             onClick={() => { setRaw(String(value)); setEditing(true); }}
-            className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono cursor-text hover:border-blue-400"
+            className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono text-slate-800 cursor-text hover:border-blue-400"
           >
             {fmt(value)}
           </div>
@@ -229,12 +231,13 @@ function InlineMoney({ value, onChange, step = 1000, min = 0 }) {
   if (editing) return (
     <input type="number" autoFocus value={raw}
       onChange={e => { setRaw(e.target.value); onChange(parseFloat(e.target.value) || 0); }}
+      onFocus={e => e.target.select()}
       onBlur={() => setEditing(false)} step={step} min={min}
-      className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400" />
   );
   return (
     <div onClick={() => { setRaw(String(value)); setEditing(true); }}
-      className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono cursor-text hover:border-blue-400">
+      className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-800 cursor-text hover:border-blue-400">
       {fmt(value)}
     </div>
   );
@@ -307,12 +310,12 @@ function SensTable({ title, data, rowLabel, colLabel, format, pctVar, metric, th
   const fmtCell = (v) => format === "pct" ? fmtPct(v) : v?.toFixed(2) + "x";
   const cellColor = (v) => {
     if (invertColor) {
-      if (threshold) return v <= threshold ? "bg-emerald-50 text-emerald-700" : v <= threshold * 1.15 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700";
-      return v < 0.5 ? "bg-emerald-50 text-emerald-700" : v < 0.65 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700";
+      if (threshold) return v <= threshold ? "bg-emerald-200 text-emerald-800" : v <= threshold * 1.15 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800";
+      return v < 0.5 ? "bg-emerald-200 text-emerald-800" : v < 0.65 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800";
     }
-    if (threshold) return v >= threshold ? "bg-emerald-50 text-emerald-700" : v >= threshold * 0.75 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700";
-    if (format === "pct") return v > 0.15 ? "bg-emerald-50 text-emerald-700" : v > 0.08 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700";
-    return v > 1.3 ? "bg-emerald-50 text-emerald-700" : v > 1.1 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700";
+    if (threshold) return v >= threshold ? "bg-emerald-200 text-emerald-800" : v >= threshold * 0.75 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800";
+    if (format === "pct") return v > 0.15 ? "bg-emerald-200 text-emerald-800" : v > 0.08 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800";
+    return v > 1.3 ? "bg-emerald-200 text-emerald-800" : v > 1.1 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800";
   };
   const fmtB = fmtBase || ((v) => "$" + fmt(v));
   const colLbl = (s) => {
@@ -524,11 +527,11 @@ export default function PrefactibilidadApp() {
   // 5 escenarios predefinidos
   const escenarios = useMemo(() => {
     const defs = [
-      { nombre: "Agresivo", precioDelta: 0.20, costoDelta: -0.10, color: "text-emerald-700", bg: "bg-emerald-50" },
-      { nombre: "Optimista", precioDelta: 0.10, costoDelta: -0.05, color: "text-emerald-600", bg: "bg-emerald-50" },
+      { nombre: "Agresivo", precioDelta: 0.20, costoDelta: -0.10, color: "text-emerald-700", bg: "bg-emerald-200" },
+      { nombre: "Optimista", precioDelta: 0.10, costoDelta: -0.05, color: "text-emerald-600", bg: "bg-emerald-200" },
       { nombre: "Base", precioDelta: 0, costoDelta: 0, color: "text-blue-700", bg: "bg-blue-50" },
-      { nombre: "Conservador", precioDelta: -0.05, costoDelta: 0.05, color: "text-amber-700", bg: "bg-amber-50" },
-      { nombre: "Pesimista", precioDelta: -0.15, costoDelta: 0.10, color: "text-red-700", bg: "bg-red-50" },
+      { nombre: "Conservador", precioDelta: -0.05, costoDelta: 0.05, color: "text-amber-700", bg: "bg-amber-200" },
+      { nombre: "Pesimista", precioDelta: -0.15, costoDelta: 0.10, color: "text-red-700", bg: "bg-red-200" },
     ];
     return defs.map(d => {
       const newMix = mix.map(u => ({ ...u, precioUd: u.precioUd * (1 + d.precioDelta) }));
@@ -976,7 +979,7 @@ export default function PrefactibilidadApp() {
                           {sensTirTasaDuracion.rowLabels[ri]}
                         </td>
                         {row.map((v, ci) => (
-                          <td key={ci} className={`p-1.5 text-center font-mono ${ri === 2 && ci === 2 ? "font-bold ring-2 ring-blue-400 rounded" : ""} ${v >= thresholds.tirMin ? "bg-emerald-50 text-emerald-700" : v >= thresholds.tirMin * 0.75 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>
+                          <td key={ci} className={`p-1.5 text-center font-mono ${ri === 2 && ci === 2 ? "font-bold ring-2 ring-blue-400 rounded" : ""} ${v >= thresholds.tirMin ? "bg-emerald-200 text-emerald-800" : v >= thresholds.tirMin * 0.75 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>
                             {fmtPct(v)}
                           </td>
                         ))}
@@ -1007,7 +1010,7 @@ export default function PrefactibilidadApp() {
                           {sensMargenPreventas.rowLabels[ri]}
                         </td>
                         {row.map((v, ci) => (
-                          <td key={ci} className={`p-1.5 text-center font-mono ${ri === 2 && ci === 2 ? "font-bold ring-2 ring-blue-400 rounded" : ""} ${v >= thresholds.margenMin ? "bg-emerald-50 text-emerald-700" : v >= thresholds.margenMin * 0.75 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>
+                          <td key={ci} className={`p-1.5 text-center font-mono ${ri === 2 && ci === 2 ? "font-bold ring-2 ring-blue-400 rounded" : ""} ${v >= thresholds.margenMin ? "bg-emerald-200 text-emerald-800" : v >= thresholds.margenMin * 0.75 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>
                             {fmtPct(v)}
                           </td>
                         ))}
@@ -1038,7 +1041,7 @@ export default function PrefactibilidadApp() {
                           {sensTirFinanciamiento.rowLabels[ri]}
                         </td>
                         {row.map((v, ci) => (
-                          <td key={ci} className={`p-1.5 text-center font-mono ${ri === 2 && ci === 2 ? "font-bold ring-2 ring-blue-400 rounded" : ""} ${v >= thresholds.tirMin ? "bg-emerald-50 text-emerald-700" : v >= thresholds.tirMin * 0.75 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>
+                          <td key={ci} className={`p-1.5 text-center font-mono ${ri === 2 && ci === 2 ? "font-bold ring-2 ring-blue-400 rounded" : ""} ${v >= thresholds.tirMin ? "bg-emerald-200 text-emerald-800" : v >= thresholds.tirMin * 0.75 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>
                             {fmtPct(v)}
                           </td>
                         ))}
@@ -1069,7 +1072,7 @@ export default function PrefactibilidadApp() {
                           {sensMoicFinanciamiento.rowLabels[ri]}
                         </td>
                         {row.map((v, ci) => (
-                          <td key={ci} className={`p-1.5 text-center font-mono ${ri === 2 && ci === 2 ? "font-bold ring-2 ring-blue-400 rounded" : ""} ${v >= thresholds.moicMin ? "bg-emerald-50 text-emerald-700" : v >= thresholds.moicMin * 0.85 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>
+                          <td key={ci} className={`p-1.5 text-center font-mono ${ri === 2 && ci === 2 ? "font-bold ring-2 ring-blue-400 rounded" : ""} ${v >= thresholds.moicMin ? "bg-emerald-200 text-emerald-800" : v >= thresholds.moicMin * 0.85 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>
                             {v?.toFixed(3)}x
                           </td>
                         ))}
@@ -1105,11 +1108,11 @@ export default function PrefactibilidadApp() {
                           <td className="p-1.5 text-center font-mono">{fmtUSD(row.capital)}</td>
                           <td className="p-1.5 text-center font-mono">{fmtUSD(row.equityTotal)}</td>
                           <td className="p-1.5 text-center font-mono">{fmtUSD(row.prestamo)}</td>
-                          <td className={`p-1.5 text-center font-mono ${row.ltv <= thresholds.ltvMax ? "bg-emerald-50 text-emerald-700" : row.ltv <= thresholds.ltvMax * 1.15 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>{fmtPct(row.ltv)}</td>
-                          <td className={`p-1.5 text-center font-mono ${row.ltc <= thresholds.ltcMax ? "bg-emerald-50 text-emerald-700" : row.ltc <= thresholds.ltcMax * 1.15 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>{fmtPct(row.ltc)}</td>
-                          <td className={`p-1.5 text-center font-mono ${row.cobertura >= 0.25 ? "bg-emerald-50 text-emerald-700" : row.cobertura >= 0.15 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>{fmtPct(row.cobertura)}</td>
-                          <td className={`p-1.5 text-center font-mono ${row.tir >= thresholds.tirMin ? "bg-emerald-50 text-emerald-700" : row.tir >= thresholds.tirMin * 0.75 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>{fmtPct(row.tir)}</td>
-                          <td className={`p-1.5 text-center font-mono ${row.moic >= thresholds.moicMin ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{row.moic.toFixed(3)}x</td>
+                          <td className={`p-1.5 text-center font-mono ${row.ltv <= thresholds.ltvMax ? "bg-emerald-200 text-emerald-800" : row.ltv <= thresholds.ltvMax * 1.15 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(row.ltv)}</td>
+                          <td className={`p-1.5 text-center font-mono ${row.ltc <= thresholds.ltcMax ? "bg-emerald-200 text-emerald-800" : row.ltc <= thresholds.ltcMax * 1.15 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(row.ltc)}</td>
+                          <td className={`p-1.5 text-center font-mono ${row.cobertura >= 0.25 ? "bg-emerald-200 text-emerald-800" : row.cobertura >= 0.15 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(row.cobertura)}</td>
+                          <td className={`p-1.5 text-center font-mono ${row.tir >= thresholds.tirMin ? "bg-emerald-200 text-emerald-800" : row.tir >= thresholds.tirMin * 0.75 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(row.tir)}</td>
+                          <td className={`p-1.5 text-center font-mono ${row.moic >= thresholds.moicMin ? "bg-emerald-200 text-emerald-800" : "bg-amber-200 text-amber-800"}`}>{row.moic.toFixed(3)}x</td>
                         </tr>
                       );
                     })}
@@ -1155,13 +1158,13 @@ export default function PrefactibilidadApp() {
                               Precio {e.precioDelta >= 0 ? "+" : ""}{(e.precioDelta*100).toFixed(0)}%, Costo {e.costoDelta >= 0 ? "+" : ""}{(e.costoDelta*100).toFixed(0)}%
                             </div>
                           </td>
-                          <td className="p-2 text-center font-mono">{fmtUSD(e.ingresoTotal)}</td>
-                          <td className="p-2 text-center font-mono">{fmtUSD(e.costoPreFinan)}</td>
+                          <td className="p-2 text-center font-mono text-slate-700">{fmtUSD(e.ingresoTotal)}</td>
+                          <td className="p-2 text-center font-mono text-slate-700">{fmtUSD(e.costoPreFinan)}</td>
                           <td className={`p-2 text-center font-mono font-bold ${e.utilidadNeta >= 0 ? "text-emerald-700" : "text-red-700"}`}>{fmtUSD(e.utilidadNeta)}</td>
-                          <td className={`p-2 text-center font-mono ${e.margen >= thresholds.margenMin ? "bg-emerald-50 text-emerald-700" : e.margen >= thresholds.margenMin * 0.75 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>{fmtPct(e.margen)}</td>
-                          <td className={`p-2 text-center font-mono ${e.roi >= thresholds.roiMin ? "bg-emerald-50 text-emerald-700" : e.roi >= thresholds.roiMin * 0.75 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>{fmtPct(e.roi)}</td>
-                          <td className={`p-2 text-center font-mono ${e.moic >= thresholds.moicMin ? "bg-emerald-50 text-emerald-700" : e.moic >= thresholds.moicMin * 0.85 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>{e.moic.toFixed(2)}x</td>
-                          <td className={`p-2 text-center font-mono ${e.tir >= thresholds.tirMin ? "bg-emerald-50 text-emerald-700" : e.tir >= thresholds.tirMin * 0.75 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>{fmtPct(e.tir)}</td>
+                          <td className={`p-2 text-center font-mono ${e.margen >= thresholds.margenMin ? "bg-emerald-200 text-emerald-800" : e.margen >= thresholds.margenMin * 0.75 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(e.margen)}</td>
+                          <td className={`p-2 text-center font-mono ${e.roi >= thresholds.roiMin ? "bg-emerald-200 text-emerald-800" : e.roi >= thresholds.roiMin * 0.75 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(e.roi)}</td>
+                          <td className={`p-2 text-center font-mono ${e.moic >= thresholds.moicMin ? "bg-emerald-200 text-emerald-800" : e.moic >= thresholds.moicMin * 0.85 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{e.moic.toFixed(2)}x</td>
+                          <td className={`p-2 text-center font-mono ${e.tir >= thresholds.tirMin ? "bg-emerald-200 text-emerald-800" : e.tir >= thresholds.tirMin * 0.75 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(e.tir)}</td>
                           <td className="p-2 text-center">
                             <span className="px-2 py-1 rounded text-xs font-bold text-white" style={{ backgroundColor: e.decisionColor }}>
                               {e.decision}

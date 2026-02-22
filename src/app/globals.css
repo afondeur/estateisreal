@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #1e293b;
+  --background: #1a2332;
   --foreground: #e2e8f0;
 }
 
 body {
-  background: #1e293b;
+  background: #1a2332;
   color: #e2e8f0;
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -15,21 +15,70 @@ input, select, textarea {
   color: #1e293b !important;
 }
 
+/* Forzar texto oscuro dentro de tarjetas con fondo claro */
+.bg-white,
+.bg-slate-50,
+.bg-slate-100,
+.bg-blue-50,
+.bg-emerald-50,
+.bg-amber-50,
+.bg-red-50,
+.bg-emerald-100,
+.bg-emerald-200,
+.bg-amber-100,
+.bg-amber-200,
+.bg-red-100,
+.bg-red-200,
+.bg-blue-100 {
+  color: #1e293b;
+}
+
+/* Asegurar que headers de tablas dentro de tarjetas se lean */
+.bg-white th,
+.bg-white td {
+  color: #334155;
+}
+
+/* Clases de texto explícitas tienen prioridad */
+.text-emerald-800 { color: #065f46 !important; }
+.text-emerald-700 { color: #047857 !important; }
+.text-emerald-600 { color: #059669 !important; }
+.text-amber-800 { color: #92400e !important; }
+.text-amber-700 { color: #b45309 !important; }
+.text-red-800 { color: #991b1b !important; }
+.text-red-700 { color: #b91c1c !important; }
+.text-blue-700 { color: #1d4ed8 !important; }
+.text-slate-800 { color: #1e293b !important; }
+.text-slate-700 { color: #334155 !important; }
+.text-slate-600 { color: #475569 !important; }
+.text-slate-500 { color: #64748b !important; }
+
 /* ═══ PRINT STYLES ═══ */
 @media print {
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  body {
+  html, body {
     background: white !important;
     color: #1e293b !important;
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   .no-print {
     display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
+  /* Eliminar min-height para evitar página en blanco */
+  .min-h-screen {
+    background: white !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  /* Todas las secciones se muestran en print */
   .print-section {
     display: block !important;
     page-break-before: always;
@@ -40,23 +89,38 @@ input, select, textarea {
   .avoid-break {
     page-break-inside: avoid;
   }
-  /* Forzar fondo blanco en todo el app container */
-  .min-h-screen {
-    background: white !important;
-    min-height: auto !important;
+  /* Compactar espaciado para menos desperdicio */
+  .space-y-4 > * + * {
+    margin-top: 0.5rem !important;
   }
+  .pb-8 {
+    padding-bottom: 1rem !important;
+  }
+  .p-4 {
+    padding: 0.5rem !important;
+  }
+  .p-6 {
+    padding: 0.75rem !important;
+  }
+  .mb-3 {
+    margin-bottom: 0.25rem !important;
+  }
+  .gap-3 {
+    gap: 0.4rem !important;
+  }
+  /* Header bar de marca en cada sección */
   .print-header-bar {
     display: flex !important;
-    background: #1e293b !important;
+    background: #1a2332 !important;
     color: white !important;
-    padding: 8px 14px;
-    margin: 0 0 12px 0;
+    padding: 6px 12px;
+    margin: 0 0 8px 0;
     border-radius: 4px;
     justify-content: space-between;
     align-items: center;
   }
   .print-header-bar .brand {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 900;
     letter-spacing: 0.15em;
   }
@@ -67,11 +131,22 @@ input, select, textarea {
     font-size: 9px;
     text-align: right;
   }
-  /* Tarjetas blancas en print */
+  /* Tarjetas */
   .bg-white {
     background: white !important;
   }
-  .bg-slate-50 {
+  .bg-slate-50, .bg-slate-100 {
     background: #f8fafc !important;
+  }
+  .bg-slate-800, .bg-slate-900 {
+    background: white !important;
+    color: #1e293b !important;
+  }
+  /* Textos más compactos */
+  .text-xs {
+    font-size: 0.65rem !important;
+  }
+  .text-sm {
+    font-size: 0.75rem !important;
   }
 }
