@@ -27,8 +27,15 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+  // Emails con acceso Premium automático (administradores)
+  const ADMIN_EMAILS = [
+    "afondeur@gmail.com",
+    "afondeur@merafondeur.com",
+  ];
+
   const login = (email, name) => {
-    const u = { email, name, plan: "free", createdAt: new Date().toISOString() };
+    const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase().trim());
+    const u = { email, name, plan: isAdmin ? "premium" : "free", createdAt: new Date().toISOString() };
     setUser(u);
     localStorage.setItem("eir_user", JSON.stringify(u));
   };
