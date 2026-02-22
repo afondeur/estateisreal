@@ -888,7 +888,6 @@ export default function PrefactibilidadApp() {
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Costos blandos</span><span>{fmtUSD(r.costoSoft)}</span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión inmobiliaria</span><span>{fmtUSD(r.costoComision)}</span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Publicidad y mercadeo</span><span>{fmtUSD(r.costoMarketing)}</span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Fee desarrollador</span><span>{fmtUSD(r.costoDevFee)}</span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Contingencias</span><span>{fmtUSD(r.costoContingencias)}</span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Intereses bancarios</span><span>{fmtUSD(r.intereses)}</span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión bancaria</span><span>{fmtUSD(r.comisionBancaria)}</span></div>
@@ -903,7 +902,8 @@ export default function PrefactibilidadApp() {
                     <div className="flex justify-between px-2 py-1 text-slate-600 border-t border-slate-200 pt-1"><span className="font-semibold">Total equity (socios)</span><span className="font-semibold">{fmtUSD(r.equityTotal)}</span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Préstamo bancario</span><span>{fmtUSD(r.prestamo)}</span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Preventas cobradas en obra</span><span>{fmtUSD(r.preventas)}</span></div>
-                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL FUENTES</span><span>{fmtUSD(r.equityTotal + r.prestamo + r.preventas)}</span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Fee desarrollador</span><span>{fmtUSD(r.costoDevFee)}</span></div>
+                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL FUENTES</span><span>{fmtUSD(r.equityTotal + r.prestamo + r.preventas + r.costoDevFee)}</span></div>
                   </div>
                   <div className="mt-3 text-xs text-slate-500 italic">La utilidad neta ({fmtUSD(r.utilidadNeta)}) es la diferencia entre fuentes y usos.</div>
                 </div>
