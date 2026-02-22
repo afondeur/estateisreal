@@ -1,13 +1,42 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import { useAuth } from "../../context/AuthContext";
 
 export default function PricingPage() {
   const { user, tier } = useAuth();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const isFree = !user || tier === "free";
   const isPro = tier === "pro";
+
+  const handleCheckout = async () => {
+    if (!user) {
+      router.push("/registro");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, userId: user.id }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Error al iniciar el pago. Intenta de nuevo.");
+        setLoading(false);
+      }
+    } catch (err) {
+      alert("Error de conexión. Intenta de nuevo.");
+      setLoading(false);
+    }
+  };
 
   const plans = [
     {
@@ -41,8 +70,8 @@ export default function PricingPage() {
         "PDF profesional sin marca",
         "Soporte prioritario",
       ],
-      cta: isPro ? "Tu plan actual" : "Empezar Pro",
-      ctaLink: null,
+      cta: isPro ? "Tu plan actual" : loading ? "Procesando..." : "Empezar Pro",
+      ctaAction: handleCheckout,
       highlighted: true,
       current: isPro,
     },
@@ -62,6 +91,13 @@ export default function PricingPage() {
               Evalúa proyectos inmobiliarios con precisión profesional. Comienza gratis y actualiza cuando lo necesites.
             </p>
           </div>
+
+          {/* Mensaje de éxito después de pago */}
+          {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("success") && (
+            <div className="mb-8 bg-emerald-900/30 border border-emerald-600 rounded-xl p-4 text-center">
+              <p className="text-emerald-300 font-bold">¡Bienvenido al plan Pro! Tu cuenta ya está activada.</p>
+            </div>
+          )}
 
           {/* Cards */}
           <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
@@ -121,12 +157,13 @@ export default function PricingPage() {
                   </Link>
                 ) : (
                   <button
+                    disabled={loading && plan.highlighted}
                     className={`w-full py-3 rounded-xl font-bold transition text-sm ${
                       plan.highlighted
-                        ? "bg-blue-600 hover:bg-blue-500 text-white"
+                        ? "bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 disabled:cursor-wait"
                         : "bg-slate-600 hover:bg-slate-500 text-white"
                     }`}
-                    onClick={() => alert("Próximamente: pago con Stripe. Estamos en proceso de configurar los pagos.")}
+                    onClick={plan.ctaAction || null}
                   >
                     {plan.cta}
                   </button>
