@@ -414,6 +414,7 @@ export default function PrefactibilidadApp() {
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [feedback1, setFeedback1] = useState("");
   const [feedback2, setFeedback2] = useState("");
+  const [feedback3, setFeedback3] = useState("");
   const [feedbackOtro, setFeedbackOtro] = useState("");
   const [validationErrors, setValidationErrors] = useState([]);
 
@@ -582,15 +583,15 @@ export default function PrefactibilidadApp() {
     // Guardar feedback en Supabase
     const respuesta2 = feedback2 === "Otro" && feedbackOtro ? `Otro: ${feedbackOtro}` : feedback2;
     try {
-      await saveFeedbackToDb(sup.proyecto || "Sin nombre", feedback1, respuesta2);
-      await trackEvent("feedback_submitted", { proyecto: sup.proyecto, feedback1, feedback2: respuesta2 });
+      await saveFeedbackToDb(sup.proyecto || "Sin nombre", feedback1, respuesta2, feedback3);
+      await trackEvent("feedback_submitted", { proyecto: sup.proyecto, feedback1, feedback2: respuesta2, feedback3 });
     } catch (e) {
       console.log("Error guardando feedback:", e);
     }
     setFeedbackSent(true);
     setShowFeedback(false);
     setTimeout(() => window.print(), 300);
-  }, [feedback1, feedback2, feedbackOtro, sup.proyecto, saveFeedbackToDb, trackEvent]);
+  }, [feedback1, feedback2, feedback3, feedbackOtro, sup.proyecto, saveFeedbackToDb, trackEvent]);
 
   const skipFeedbackAndPrint = useCallback(() => {
     setFeedbackSent(true);
@@ -1635,7 +1636,7 @@ export default function PrefactibilidadApp() {
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
             <div className="text-center mb-5">
               <span className="text-base font-black tracking-widest text-slate-800" style={{letterSpacing:"0.15em"}}>ESTATE<span className="text-blue-500">is</span>REAL</span>
-              <p className="text-sm text-slate-500 mt-2">Antes de imprimir, ayúdanos con 2 preguntas rápidas para mejorar la herramienta.</p>
+              <p className="text-sm text-slate-500 mt-2">Antes de imprimir, ayúdanos con 3 preguntas rápidas para mejorar la herramienta.</p>
             </div>
 
             <div className="space-y-4">
@@ -1671,6 +1672,18 @@ export default function PrefactibilidadApp() {
                     autoFocus
                   />
                 )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">3. Si esta herramienta fuera de pago, ¿qué modelo preferirías?</label>
+                <div className="flex flex-wrap gap-2">
+                  {["Mensualidad ($25/mes)", "Pago por análisis ($5-10)", "Ambas opciones", "No pagaría"].map(opt => (
+                    <button key={opt} onClick={() => setFeedback3(opt)}
+                      className={`px-3 py-2 text-xs rounded-lg border transition ${feedback3 === opt ? "bg-blue-600 text-white border-blue-600" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 

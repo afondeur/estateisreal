@@ -121,7 +121,7 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   // Guardar feedback
-  const saveFeedback = useCallback(async (proyecto, pregunta1, pregunta2) => {
+  const saveFeedback = useCallback(async (proyecto, pregunta1, pregunta2, pregunta3) => {
     if (!supabase) return;
     try {
       await supabase.from("feedback").insert({
@@ -130,6 +130,7 @@ export function AuthProvider({ children }) {
         proyecto,
         pregunta_1: pregunta1,
         pregunta_2: pregunta2,
+        pregunta_3: pregunta3 || null,
       });
     } catch (e) {
       console.log("Save feedback error:", e);
