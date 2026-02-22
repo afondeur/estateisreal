@@ -344,10 +344,10 @@ function SensTable({ title, data, rowLabel, colLabel, format, pctVar, metric, th
     <div className="bg-white rounded-lg border border-slate-200 p-4">
       <h4 className="text-sm font-bold text-slate-700 mb-3">{title}</h4>
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr>
-              <th className="p-1.5 text-left bg-slate-100 rounded-tl text-slate-500">{rowLabel} ↓ \ {colLabel} →</th>
+              <th className="p-1.5 text-left bg-slate-100 rounded-tl text-slate-500" style={{ width: "13%" }}>{rowLabel} ↓ \ {colLabel} →</th>
               {steps.map(s => (
                 <th key={s} className={`p-1.5 text-center ${s === 0 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>
                   {colLbl(s)}
@@ -998,10 +998,10 @@ export default function PrefactibilidadApp() {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h4 className="text-sm font-bold text-slate-700 mb-3">3. TIR — ¿Cómo afecta la tasa del banco y el plazo de construcción al retorno anualizado?</h4>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
                   <thead>
                     <tr>
-                      <th className="p-1.5 text-left bg-slate-100 text-slate-500">Tasa anual ↓ \ Meses obra →</th>
+                      <th className="p-1.5 text-left bg-slate-100 text-slate-500" style={{ width: "13%" }}>Tasa ↓ \ Meses →</th>
                       {sensTirTasaDuracion.colLabels.map((l, i) => (
                         <th key={i} className={`p-1.5 text-center ${i === 3 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
                       ))}
@@ -1029,10 +1029,10 @@ export default function PrefactibilidadApp() {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h4 className="text-sm font-bold text-slate-700 mb-3">4. Margen Neto — ¿Cómo impacta vender más en preventas o que suba el costo?</h4>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
                   <thead>
                     <tr>
-                      <th className="p-1.5 text-left bg-slate-100 text-slate-500">Var. costo ↓ \ % Preventas →</th>
+                      <th className="p-1.5 text-left bg-slate-100 text-slate-500" style={{ width: "13%" }}>Costo ↓ \ Prev. →</th>
                       {sensMargenPreventas.colLabels.map((l, i) => (
                         <th key={i} className={`p-1.5 text-center ${i === 3 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
                       ))}
@@ -1060,10 +1060,10 @@ export default function PrefactibilidadApp() {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h4 className="text-sm font-bold text-slate-700 mb-3">5. TIR — ¿Qué pasa si pido más o menos al banco, o si los socios ponen más capital?</h4>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
                   <thead>
                     <tr>
-                      <th className="p-1.5 text-left bg-slate-100 text-slate-500">% Financ. ↓ \ Capital socios →</th>
+                      <th className="p-1.5 text-left bg-slate-100 text-slate-500" style={{ width: "13%" }}>% Fin. ↓ \ Capital →</th>
                       {sensTirFinanciamiento.colLabels.map((l, i) => (
                         <th key={i} className={`p-1.5 text-center ${i === 3 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
                       ))}
@@ -1091,10 +1091,10 @@ export default function PrefactibilidadApp() {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h4 className="text-sm font-bold text-slate-700 mb-3">6. MOIC — ¿Cuántas veces recuperan su dinero los socios según nivel de deuda y capital?</h4>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
                   <thead>
                     <tr>
-                      <th className="p-1.5 text-left bg-slate-100 text-slate-500">% Financ. ↓ \ Capital socios →</th>
+                      <th className="p-1.5 text-left bg-slate-100 text-slate-500" style={{ width: "13%" }}>% Fin. ↓ \ Capital →</th>
                       {sensMoicFinanciamiento.colLabels.map((l, i) => (
                         <th key={i} className={`p-1.5 text-center ${i === 3 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
                       ))}
