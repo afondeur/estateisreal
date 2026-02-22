@@ -140,6 +140,69 @@ export function AuthProvider({ children }) {
     if (user) await fetchProfile(user.id);
   }, [user]);
 
+  // ─── PROYECTOS ───
+  // Guardar proyecto (crear o actualizar)
+  const saveProject = useCallback(async (nombre, supuestos, mixData, thresholdsData, projectId = null) => {
+    if (!supabase || !user) return { error: { message: "No autenticado" } };
+    try {
+      if (projectId) {
+        // Actualizar existente
+        const { data, error } = await supabase
+          .from("proyectos")
+          .update({ nombre, supuestos, mix: mixData, thresholds: thresholdsData, updated_at: new Date().toISOString() })
+          .eq("id", projectId)
+          .eq("user_id", user.id)
+          .select()
+          .single();
+        return { data, error };
+      } else {
+        // Crear nuevo
+        const { data, error } = await supabase
+          .from("proyectos")
+          .insert({ user_id: user.id, nombre, supuestos, mix: mixData, thresholds: thresholdsData })
+          .select()
+          .single();
+        return { data, error };
+      }
+    } catch (e) {
+      return { error: { message: e.message } };
+    }
+  }, [user]);
+
+  // Listar proyectos del usuario
+  const listProjects = useCallback(async () => {
+    if (!supabase || !user) return { data: [], error: null };
+    const { data, error } = await supabase
+      .from("proyectos")
+      .select("id, nombre, created_at, updated_at")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
+    return { data: data || [], error };
+  }, [user]);
+
+  // Cargar un proyecto
+  const loadProject = useCallback(async (projectId) => {
+    if (!supabase || !user) return { data: null, error: { message: "No autenticado" } };
+    const { data, error } = await supabase
+      .from("proyectos")
+      .select("*")
+      .eq("id", projectId)
+      .eq("user_id", user.id)
+      .single();
+    return { data, error };
+  }, [user]);
+
+  // Eliminar un proyecto
+  const deleteProject = useCallback(async (projectId) => {
+    if (!supabase || !user) return { error: { message: "No autenticado" } };
+    const { error } = await supabase
+      .from("proyectos")
+      .delete()
+      .eq("id", projectId)
+      .eq("user_id", user.id);
+    return { error };
+  }, [user]);
+
   // Tier del usuario
   const emailLower = user?.email?.toLowerCase().trim() || "";
   const isAdmin = ADMIN_EMAILS.includes(emailLower);
@@ -158,6 +221,10 @@ export function AuthProvider({ children }) {
       trackEvent,
       saveFeedback,
       refreshProfile,
+      saveProject,
+      listProjects,
+      loadProject,
+      deleteProject,
       tier,
       isAdmin,
     }}>

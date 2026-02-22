@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 
 // ═══════════════════════════════════════════════════════════
@@ -404,7 +404,7 @@ function PrintDisclaimer() {
 // ═══════════════════════════════════════════════
 
 export default function PrefactibilidadApp() {
-  const { trackEvent, saveFeedback: saveFeedbackToDb, tier, isAdmin } = useAuth();
+  const { trackEvent, saveFeedback: saveFeedbackToDb, tier, isAdmin, user, saveProject, listProjects, loadProject, deleteProject } = useAuth();
   const [sup, setSup] = useState(DEFAULT_SUPUESTOS);
   const [mix, setMix] = useState(DEFAULT_MIX);
   const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
@@ -416,6 +416,13 @@ export default function PrefactibilidadApp() {
   const [feedback2, setFeedback2] = useState("");
   const [feedbackOtro, setFeedbackOtro] = useState("");
   const [validationErrors, setValidationErrors] = useState([]);
+
+  // ─── Estado de proyectos guardados ───
+  const [currentProjectId, setCurrentProjectId] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [showProjectsPanel, setShowProjectsPanel] = useState(false);
+  const [savingProject, setSavingProject] = useState(false);
+  const [projectMsg, setProjectMsg] = useState("");
 
   const updateSup = useCallback((key, val) => setSup(prev => ({ ...prev, [key]: val })), []);
   const updateMix = useCallback((idx, key, val) => setMix(prev => prev.map((u, i) => i === idx ? { ...u, [key]: val } : u)), []);
@@ -441,6 +448,79 @@ export default function PrefactibilidadApp() {
       { tipo: "Tipo 5", qty: 0, m2: 0, precioUd: 0 },
       { tipo: "Tipo 6", qty: 0, m2: 0, precioUd: 0 },
     ]);
+  }, []);
+
+  // ─── Funciones de proyectos ───
+  const refreshProjects = useCallback(async () => {
+    if (!user) return;
+    const { data } = await listProjects();
+    setProjects(data || []);
+  }, [user, listProjects]);
+
+  // Cargar lista al montar o al cambiar usuario
+  useEffect(() => {
+    if (user) refreshProjects();
+  }, [user, refreshProjects]);
+
+  const handleSaveProject = useCallback(async () => {
+    if (!sup.proyecto.trim()) {
+      setProjectMsg("Escribe un nombre de proyecto primero");
+      setTimeout(() => setProjectMsg(""), 3000);
+      return;
+    }
+    setSavingProject(true);
+    const { data, error } = await saveProject(sup.proyecto, sup, mix, thresholds, currentProjectId);
+    if (error) {
+      setProjectMsg("Error al guardar: " + error.message);
+    } else {
+      setCurrentProjectId(data.id);
+      setProjectMsg("Proyecto guardado");
+      await refreshProjects();
+      trackEvent("proyecto_guardado", { proyecto: sup.proyecto, id: data.id });
+    }
+    setSavingProject(false);
+    setTimeout(() => setProjectMsg(""), 3000);
+  }, [sup, mix, thresholds, currentProjectId, saveProject, refreshProjects, trackEvent]);
+
+  const handleLoadProject = useCallback(async (projectId) => {
+    const { data, error } = await loadProject(projectId);
+    if (error || !data) {
+      setProjectMsg("Error al cargar proyecto");
+      setTimeout(() => setProjectMsg(""), 3000);
+      return;
+    }
+    setSup(data.supuestos);
+    setMix(data.mix);
+    setThresholds(data.thresholds);
+    setCurrentProjectId(data.id);
+    setShowProjectsPanel(false);
+    setProjectMsg("Proyecto cargado: " + data.nombre);
+    trackEvent("proyecto_cargado", { proyecto: data.nombre, id: data.id });
+    setTimeout(() => setProjectMsg(""), 3000);
+  }, [loadProject, trackEvent]);
+
+  const handleDeleteProject = useCallback(async (projectId, nombre) => {
+    if (!window.confirm(`¿Eliminar "${nombre}"? Esta acción no se puede deshacer.`)) return;
+    const { error } = await deleteProject(projectId);
+    if (error) {
+      setProjectMsg("Error al eliminar");
+    } else {
+      if (currentProjectId === projectId) setCurrentProjectId(null);
+      setProjectMsg("Proyecto eliminado");
+      await refreshProjects();
+    }
+    setTimeout(() => setProjectMsg(""), 3000);
+  }, [deleteProject, currentProjectId, refreshProjects]);
+
+  const handleNewProject = useCallback(() => {
+    setSup(DEFAULT_SUPUESTOS);
+    setMix(DEFAULT_MIX);
+    setThresholds(DEFAULT_THRESHOLDS);
+    setCurrentProjectId(null);
+    setValidationErrors([]);
+    setTab("supuestos");
+    setProjectMsg("Nuevo proyecto iniciado");
+    setTimeout(() => setProjectMsg(""), 3000);
   }, []);
 
   // Validación de campos obligatorios
@@ -735,7 +815,33 @@ export default function PrefactibilidadApp() {
             </div>
             <p className="text-xs text-slate-400">Análisis financiero rápido para proyectos inmobiliarios | v4.2</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {user && (
+              <>
+                <button
+                  onClick={handleNewProject}
+                  className="no-print px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition"
+                  title="Nuevo proyecto"
+                >
+                  + Nuevo
+                </button>
+                <button
+                  onClick={handleSaveProject}
+                  disabled={savingProject}
+                  className="no-print px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded-lg transition disabled:opacity-50"
+                  title={currentProjectId ? "Actualizar proyecto" : "Guardar proyecto"}
+                >
+                  {savingProject ? "..." : currentProjectId ? "Actualizar" : "Guardar"}
+                </button>
+                <button
+                  onClick={() => { setShowProjectsPanel(!showProjectsPanel); if (!showProjectsPanel) refreshProjects(); }}
+                  className="no-print px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition"
+                  title="Mis proyectos guardados"
+                >
+                  Mis Proyectos {projects.length > 0 && `(${projects.length})`}
+                </button>
+              </>
+            )}
             <button
               onClick={handlePrint}
               className="no-print px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition"
@@ -743,8 +849,8 @@ export default function PrefactibilidadApp() {
             >
               Imprimir
             </button>
-            <div className="text-right">
-              <div className="text-xs text-slate-400">{sup.proyecto}</div>
+            <div className="text-right hidden sm:block">
+              <div className="text-xs text-slate-400">{sup.proyecto}{currentProjectId && " ✓"}</div>
               <div className="text-xs text-slate-500">{sup.ubicacion}</div>
             </div>
             <div
@@ -776,6 +882,54 @@ export default function PrefactibilidadApp() {
           ))}
         </div>
       </div>
+
+      {/* Mensaje de estado de proyecto */}
+      {projectMsg && (
+        <div className="no-print max-w-5xl mx-auto px-4 pt-2">
+          <div className="bg-blue-900/50 border border-blue-700 text-blue-200 text-sm px-4 py-2 rounded-lg text-center">
+            {projectMsg}
+          </div>
+        </div>
+      )}
+
+      {/* Panel de Mis Proyectos */}
+      {showProjectsPanel && (
+        <div className="no-print max-w-5xl mx-auto px-4 pt-3">
+          <div className="bg-slate-700 border border-slate-600 rounded-xl p-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-bold text-slate-200">Mis Proyectos Guardados</h3>
+              <button onClick={() => setShowProjectsPanel(false)} className="text-slate-400 hover:text-white text-lg">✕</button>
+            </div>
+            {projects.length === 0 ? (
+              <p className="text-slate-400 text-sm text-center py-4">No tienes proyectos guardados aún. Completa los supuestos y haz clic en "Guardar".</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {projects.map(p => (
+                  <div key={p.id} className={`flex items-center justify-between p-3 rounded-lg transition ${currentProjectId === p.id ? "bg-blue-900/40 border border-blue-600" : "bg-slate-800 hover:bg-slate-600"}`}>
+                    <button
+                      onClick={() => handleLoadProject(p.id)}
+                      className="flex-1 text-left"
+                    >
+                      <div className="text-sm font-medium text-slate-100">{p.nombre}</div>
+                      <div className="text-xs text-slate-400">
+                        {new Date(p.updated_at).toLocaleDateString("es-DO", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        {currentProjectId === p.id && <span className="ml-2 text-blue-400 font-medium">• Activo</span>}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProject(p.id, p.nombre)}
+                      className="ml-3 text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-900/30 transition"
+                      title="Eliminar proyecto"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="no-print max-w-5xl mx-auto px-4 pt-4">
