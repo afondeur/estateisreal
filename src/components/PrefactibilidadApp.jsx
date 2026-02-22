@@ -1159,7 +1159,7 @@ export default function PrefactibilidadApp() {
                     {sensEstructura.map((row, i) => {
                       const isBase = Math.abs(row.capital - sup.equityCapital) < 5000;
                       const allGreen = row.ltv <= thresholds.ltvMax && row.ltc <= thresholds.ltcMax && row.cobertura >= 0.25 && row.tir >= thresholds.tirMin && row.moic >= thresholds.moicMin;
-                      const optCell = "bg-emerald-800 text-white font-bold";
+                      const optCell = "bg-emerald-400 text-slate-900 font-bold";
                       const normalCell = (good, marginal) => good ? "bg-emerald-200 text-emerald-800" : marginal ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800";
                       return (
                         <tr key={i} className={isBase && !allGreen ? "bg-blue-50 font-bold" : ""}>
