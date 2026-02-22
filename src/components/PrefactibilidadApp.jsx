@@ -29,7 +29,7 @@ const DEFAULT_SUPUESTOS = {
   mesesPredev: 0, mesesConstruccion: 0, mesesPostVenta: 0,
   preventaPct: 0, cobroPct: 0,
   equityCapital: 0,
-  parqueosDisenados: 0, ratioResidente: 0, divisorVisita: 0, minUnidadesVisita: 0, pctDiscapacidad: 0,
+  parqueosDisenados: 0, ratioResidente: 1, divisorVisita: 10, pctDiscapacidad: 0.04,
 };
 
 const fmt = (n, dec = 0) => n == null || isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -118,7 +118,7 @@ function calcAll(sup, mix, thresholds) {
 
   // ─── PARQUEOS ───
   const pResidente = Math.ceil(unidades * sup.ratioResidente);
-  const pVisita = unidades > sup.minUnidadesVisita ? Math.floor(unidades / sup.divisorVisita) : 0;
+  const pVisita = sup.divisorVisita > 0 ? Math.floor(unidades / sup.divisorVisita) : 0;
   const pDiscapacidad = Math.max(1, Math.ceil(pResidente * sup.pctDiscapacidad));
   const pRequeridos = pResidente + pVisita + pDiscapacidad;
   const pCumple = sup.parqueosDisenados >= pRequeridos;
@@ -787,7 +787,6 @@ export default function PrefactibilidadApp() {
                 <InputField label="Parqueos incluidos en el diseño" value={sup.parqueosDisenados} onChange={v => updateSup("parqueosDisenados", v)} suffix="uds" />
                 <InputField label="Parqueos por unidad (normativa)" value={sup.ratioResidente} onChange={v => updateSup("ratioResidente", v)} step={0.5} suffix="parq/ud" />
                 <InputField label="1 parqueo de visita cada X unidades" value={sup.divisorVisita} onChange={v => updateSup("divisorVisita", v)} suffix="uds" />
-                <InputField label="Mín. de unidades para exigir visitas" value={sup.minUnidadesVisita} onChange={v => updateSup("minUnidadesVisita", v)} suffix="uds" />
                 <PctField label="% de parqueos para discapacidad" value={sup.pctDiscapacidad} onChange={v => updateSup("pctDiscapacidad", v)} step={0.5} />
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Requeridos / Status</label>
