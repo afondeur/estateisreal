@@ -404,7 +404,7 @@ function PrintDisclaimer() {
 // ═══════════════════════════════════════════════
 
 export default function PrefactibilidadApp() {
-  const { trackEvent, saveFeedback: saveFeedbackToDb } = useAuth();
+  const { trackEvent, saveFeedback: saveFeedbackToDb, tier } = useAuth();
   const [sup, setSup] = useState(DEFAULT_SUPUESTOS);
   const [mix, setMix] = useState(DEFAULT_MIX);
   const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
@@ -414,6 +414,7 @@ export default function PrefactibilidadApp() {
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [feedback1, setFeedback1] = useState("");
   const [feedback2, setFeedback2] = useState("");
+  const [feedbackOtro, setFeedbackOtro] = useState("");
   const [validationErrors, setValidationErrors] = useState([]);
 
   const updateSup = useCallback((key, val) => setSup(prev => ({ ...prev, [key]: val })), []);
@@ -477,16 +478,17 @@ export default function PrefactibilidadApp() {
 
   const submitFeedbackAndPrint = useCallback(async () => {
     // Guardar feedback en Supabase
+    const respuesta2 = feedback2 === "Otro" && feedbackOtro ? `Otro: ${feedbackOtro}` : feedback2;
     try {
-      await saveFeedbackToDb(sup.proyecto || "Sin nombre", feedback1, feedback2);
-      await trackEvent("feedback_submitted", { proyecto: sup.proyecto, feedback1, feedback2 });
+      await saveFeedbackToDb(sup.proyecto || "Sin nombre", feedback1, respuesta2);
+      await trackEvent("feedback_submitted", { proyecto: sup.proyecto, feedback1, feedback2: respuesta2 });
     } catch (e) {
       console.log("Error guardando feedback:", e);
     }
     setFeedbackSent(true);
     setShowFeedback(false);
     setTimeout(() => window.print(), 300);
-  }, [feedback1, feedback2, sup.proyecto, saveFeedbackToDb, trackEvent]);
+  }, [feedback1, feedback2, feedbackOtro, sup.proyecto, saveFeedbackToDb, trackEvent]);
 
   const skipFeedbackAndPrint = useCallback(() => {
     setFeedbackSent(true);
@@ -1104,6 +1106,26 @@ export default function PrefactibilidadApp() {
         {/* ═══ TAB: SENSIBILIDAD ═══ */}
         <div className="print-section" style={{ display: tab === "sensibilidad" ? "block" : "none" }}>
           <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span><span style={{marginLeft:"10px",fontSize:"8px",color:"#94a3b8"}}>Prefactibilidad Inmobiliaria v1.0</span></div><div className="project-info">{sup.proyecto && <><strong>{sup.proyecto}</strong> — {sup.ubicacion}<br/>{sup.fecha}</>}</div></div>
+          {tier !== "pro" ? (
+            <div className="relative">
+              <div className="absolute inset-0 z-10 flex items-center justify-center" style={{backdropFilter:"blur(0px)"}}>
+                <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 max-w-md mx-4 text-center">
+                  <div className="text-4xl mb-3">🔒</div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Tablas de Sensibilidad</h3>
+                  <p className="text-sm text-slate-500 mb-4">Descubre cómo cambian tus resultados al variar costos, precios y condiciones del banco. Disponible en el plan Pro.</p>
+                  <a href="/pricing" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition text-sm">Upgrade a Pro — $25/mes</a>
+                  <p className="text-xs text-slate-400 mt-3">7 tablas de sensibilidad 7x7 con semáforo visual</p>
+                </div>
+              </div>
+              <div className="space-y-4 pb-8 opacity-20 pointer-events-none select-none" style={{filter:"blur(4px)", maxHeight:"600px", overflow:"hidden"}}>
+                <div className="bg-blue-50 rounded-lg border border-blue-200 p-3 text-sm text-blue-700">
+                  <div className="flex items-center justify-between gap-4">
+                    <div><strong>Contenido bloqueado</strong> — Upgrade a Pro para ver las tablas de sensibilidad completas.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className="space-y-4 pb-8">
             <div className="bg-blue-50 rounded-lg border border-blue-200 p-3 text-sm text-blue-700">
               <div className="flex items-center justify-between gap-4">
@@ -1292,11 +1314,32 @@ export default function PrefactibilidadApp() {
             </div>
           <PrintDisclaimer />
           </div>
+          )}
         </div>
 
         {/* ═══ TAB: ESCENARIOS ═══ */}
         <div className="print-section" style={{ display: tab === "escenarios" ? "block" : "none" }}>
           <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span><span style={{marginLeft:"10px",fontSize:"8px",color:"#94a3b8"}}>Prefactibilidad Inmobiliaria v1.0</span></div><div className="project-info">{sup.proyecto && <><strong>{sup.proyecto}</strong> — {sup.ubicacion}<br/>{sup.fecha}</>}</div></div>
+          {tier !== "pro" ? (
+            <div className="relative">
+              <div className="absolute inset-0 z-10 flex items-center justify-center" style={{backdropFilter:"blur(0px)"}}>
+                <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 max-w-md mx-4 text-center">
+                  <div className="text-4xl mb-3">🔒</div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Escenarios de Mercado</h3>
+                  <p className="text-sm text-slate-500 mb-4">Evalúa cómo se comporta tu proyecto en 5 escenarios diferentes: desde pesimista hasta optimista. Disponible en el plan Pro.</p>
+                  <a href="/pricing" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition text-sm">Upgrade a Pro — $25/mes</a>
+                  <p className="text-xs text-slate-400 mt-3">5 escenarios + punto de equilibrio detallado</p>
+                </div>
+              </div>
+              <div className="space-y-4 pb-8 opacity-20 pointer-events-none select-none" style={{filter:"blur(4px)", maxHeight:"600px", overflow:"hidden"}}>
+                <div className="bg-blue-50 rounded-lg border border-blue-200 p-3 text-sm text-blue-700">
+                  <div className="flex items-center justify-between gap-4">
+                    <div><strong>Contenido bloqueado</strong> — Upgrade a Pro para ver los escenarios de mercado completos.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className="space-y-4 pb-8">
             {/* 5 Escenarios */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
@@ -1381,6 +1424,7 @@ export default function PrefactibilidadApp() {
             </div>
           <PrintDisclaimer />
           </div>
+          )}
         </div>
       </div>
 
@@ -1415,12 +1459,22 @@ export default function PrefactibilidadApp() {
                 <label className="text-sm font-medium text-slate-700 block mb-2">2. ¿Qué te gustaría que agregáramos?</label>
                 <div className="flex flex-wrap gap-2">
                   {["Flujo de caja mensual", "Comparar proyectos", "Gráficos visuales", "Más escenarios", "Otro"].map(opt => (
-                    <button key={opt} onClick={() => setFeedback2(opt)}
+                    <button key={opt} onClick={() => { setFeedback2(opt); if (opt !== "Otro") setFeedbackOtro(""); }}
                       className={`px-3 py-2 text-xs rounded-lg border transition ${feedback2 === opt ? "bg-blue-600 text-white border-blue-600" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>
                       {opt}
                     </button>
                   ))}
                 </div>
+                {feedback2 === "Otro" && (
+                  <input
+                    type="text"
+                    value={feedbackOtro}
+                    onChange={(e) => setFeedbackOtro(e.target.value)}
+                    placeholder="Escribe tu sugerencia..."
+                    className="mt-2 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    autoFocus
+                  />
+                )}
               </div>
             </div>
 

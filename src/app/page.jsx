@@ -49,7 +49,7 @@ export default function Home() {
             {[
               { icon: "📊", title: "7 Métricas Financieras", desc: "ROI, Margen, MOIC, Markup, TIR, LTV y LTC — todo calculado al instante." },
               { icon: "📈", title: "Tablas de Sensibilidad", desc: "Ve cómo cambian los resultados si varían costos, precios o condiciones del banco." },
-              { icon: "🎯", title: "Semáforo GO/NO-GO", desc: "Decisión inmediata: VIABLE, PRECAUCIÓN o NO VIABLE basada en umbrales configurables." },
+              { icon: "🎯", title: "Semáforo VIABLE · PRECAUCIÓN · NO VIABLE", desc: "Decisión inmediata basada en umbrales configurables de margen, ROI, TIR y MOIC." },
             ].map((f) => (
               <div key={f.title} className="bg-slate-800 rounded-xl border border-slate-700 p-6">
                 <div className="text-3xl mb-3">{f.icon}</div>
