@@ -16,6 +16,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   async function fetchProfile(userId) {
+    if (!supabase) return null;
     const { data } = await supabase
       .from("profiles")
       .select("*")
@@ -26,6 +27,11 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
@@ -45,6 +51,7 @@ export function AuthProvider({ children }) {
 
   // Login con email + password
   const login = useCallback(async (email, password) => {
+    if (!supabase) return { error: { message: "Servicio no disponible" } };
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error };
     return { data };
@@ -52,6 +59,7 @@ export function AuthProvider({ children }) {
 
   // Registro con email + password + nombre
   const signUp = useCallback(async (email, password, nombre, empresa) => {
+    if (!supabase) return { error: { message: "Servicio no disponible" } };
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) return { error };
     // Actualizar perfil con nombre y empresa
@@ -68,6 +76,7 @@ export function AuthProvider({ children }) {
 
   // Login con Google
   const loginWithGoogle = useCallback(async () => {
+    if (!supabase) return { error: { message: "Servicio no disponible" } };
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: window.location.origin },
@@ -77,6 +86,7 @@ export function AuthProvider({ children }) {
 
   // Logout
   const logout = useCallback(async () => {
+    if (!supabase) return;
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
@@ -84,6 +94,7 @@ export function AuthProvider({ children }) {
 
   // Tracking de eventos
   const trackEvent = useCallback(async (eventType, eventData = {}) => {
+    if (!supabase) return;
     try {
       await supabase.from("analytics_events").insert({
         user_id: user?.id || null,
@@ -97,6 +108,7 @@ export function AuthProvider({ children }) {
 
   // Guardar feedback
   const saveFeedback = useCallback(async (proyecto, pregunta1, pregunta2) => {
+    if (!supabase) return;
     try {
       await supabase.from("feedback").insert({
         user_id: user?.id || null,
