@@ -855,37 +855,55 @@ export default function PrefactibilidadApp() {
             {/* Pro Forma */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Estado de Resultados</h3>
-              <div className="space-y-0.5 text-sm font-mono">
-                {[
-                  { l: "INGRESO BRUTO TOTAL", v: r.ingresoTotal, bold: true, color: "text-emerald-700" },
-                  { l: "  (-) Terreno", v: r.precioTerreno },
-                  { l: "  (-) Construcción directa", v: r.costoConstruccion },
-                  { l: "  (-) Costos blandos", v: r.costoSoft },
-                  { l: "  (-) Fee desarrollador", v: r.costoDevFee },
-                  { l: "  (-) Comisión inmobiliaria", v: r.costoComision },
-                  { l: "  (-) Publicidad y mercadeo", v: r.costoMarketing },
-                  { l: "  (-) Contingencias", v: r.costoContingencias },
-                  { l: "COSTO TOTAL (antes de financiamiento)", v: r.costoPreFinan, bold: true, color: "text-red-600", line: true },
-                  { l: "UTILIDAD BRUTA (antes de intereses)", v: r.ingresoTotal - r.costoPreFinan, bold: true, color: r.ingresoTotal - r.costoPreFinan >= 0 ? "text-emerald-700" : "text-red-600", line: true },
-                  { l: "Margen Bruto (%)", v: null, pct: r.ingresoTotal > 0 ? (r.ingresoTotal - r.costoPreFinan) / r.ingresoTotal : 0, color: "text-slate-500" },
-                  { l: "", v: null, spacer: true },
-                  { l: "COSTOS FINANCIEROS (deuda bancaria)", v: null, bold: true, color: "text-slate-700", header: true },
-                  { l: "  Préstamo bancario (referencia)", v: r.prestamo, ref: true },
-                  { l: "  (-) Intereses estimados", v: r.intereses },
-                  { l: "  (-) Comisión bancaria al cierre", v: r.comisionBancaria },
-                  { l: "TOTAL COSTO FINANCIERO", v: r.costoFinanciero, bold: true, color: "text-red-600", line: true },
-                  { l: "", v: null, spacer: true },
-                  { l: "UTILIDAD NETA (ganancia final del proyecto)", v: r.utilidadNeta, bold: true, color: r.utilidadNeta >= 0 ? "text-emerald-700" : "text-red-600", line: true, big: true },
-                  { l: "Margen Neto (utilidad ÷ ingreso)", v: null, pct: r.margen, bold: true, color: r.margen >= 0.125 ? "text-emerald-700" : "text-amber-700" },
-                ].map((row, i) => {
-                  if (row.spacer) return <div key={i} className="h-2" />;
-                  return (
-                    <div key={i} className={`flex justify-between px-2 py-1 ${row.line ? "border-t border-slate-300 mt-1 pt-1" : ""} ${row.bold ? "font-bold" : "text-slate-600"} ${row.color || ""} ${row.big ? "text-base" : ""}`}>
-                      <span>{row.l}</span>
-                      <span>{row.pct != null ? fmtPct(row.pct) : row.v != null ? (row.ref ? fmtUSD(row.v) : fmtUSD(row.v)) : ""}</span>
-                    </div>
-                  );
-                })}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs font-mono">
+                  <thead>
+                    <tr className="bg-slate-100">
+                      <th className="p-1.5 text-left text-slate-500">Concepto</th>
+                      <th className="p-1.5 text-right text-slate-500">USD Total</th>
+                      <th className="p-1.5 text-right text-slate-500">USD/Ud</th>
+                      <th className="p-1.5 text-right text-slate-500">USD/m²</th>
+                      <th className="p-1.5 text-right text-slate-500">% Ingreso</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { l: "INGRESO BRUTO TOTAL", v: r.ingresoTotal, bold: true, color: "text-emerald-700" },
+                      { l: "(-) Terreno", v: r.precioTerreno },
+                      { l: "(-) Construcción directa", v: r.costoConstruccion },
+                      { l: "(-) Costos blandos", v: r.costoSoft },
+                      { l: "(-) Fee desarrollador", v: r.costoDevFee },
+                      { l: "(-) Comisión inmobiliaria", v: r.costoComision },
+                      { l: "(-) Publicidad y mercadeo", v: r.costoMarketing },
+                      { l: "(-) Contingencias", v: r.costoContingencias },
+                      { l: "COSTO TOTAL (antes financiamiento)", v: r.costoPreFinan, bold: true, color: "text-red-600", line: true },
+                      { l: "UTILIDAD BRUTA", v: r.ingresoTotal - r.costoPreFinan, bold: true, color: r.ingresoTotal - r.costoPreFinan >= 0 ? "text-emerald-700" : "text-red-600", line: true },
+                      { l: "", spacer: true },
+                      { l: "COSTOS FINANCIEROS", v: null, bold: true, color: "text-slate-700", header: true },
+                      { l: "Préstamo bancario (ref.)", v: r.prestamo, ref: true },
+                      { l: "(-) Intereses estimados", v: r.intereses },
+                      { l: "(-) Comisión bancaria", v: r.comisionBancaria },
+                      { l: "TOTAL COSTO FINANCIERO", v: r.costoFinanciero, bold: true, color: "text-red-600", line: true },
+                      { l: "", spacer: true },
+                      { l: "COSTO TOTAL DEL PROYECTO", v: r.costoTotal, bold: true, color: "text-red-600", line: true },
+                      { l: "UTILIDAD NETA", v: r.utilidadNeta, bold: true, color: r.utilidadNeta >= 0 ? "text-emerald-700" : "text-red-600", line: true, big: true },
+                    ].map((row, i) => {
+                      if (row.spacer) return <tr key={i}><td colSpan={5} className="h-2"></td></tr>;
+                      const perUd = row.v != null && r.unidades > 0 ? row.v / r.unidades : null;
+                      const perM2 = row.v != null && r.m2Vendible > 0 ? row.v / r.m2Vendible : null;
+                      const pctIng = row.v != null && r.ingresoTotal > 0 ? row.v / r.ingresoTotal : null;
+                      return (
+                        <tr key={i} className={`${row.line ? "border-t border-slate-300" : ""} ${row.bold ? "font-bold" : "text-slate-600"} ${row.color || ""}`}>
+                          <td className={`p-1.5 text-left ${row.header ? "pt-2" : ""}`}>{row.l}</td>
+                          <td className="p-1.5 text-right">{row.v != null ? fmtUSD(row.v) : ""}</td>
+                          <td className="p-1.5 text-right">{perUd != null && !row.header ? fmtUSD(perUd) : ""}</td>
+                          <td className="p-1.5 text-right">{perM2 != null && !row.header ? "$" + fmt(perM2, 0) : ""}</td>
+                          <td className="p-1.5 text-right">{pctIng != null && !row.header ? fmtPct(pctIng) : ""}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
 
@@ -1121,16 +1139,18 @@ export default function PrefactibilidadApp() {
                     {sensEstructura.map((row, i) => {
                       const isBase = Math.abs(row.capital - sup.equityCapital) < 5000;
                       const allGreen = row.ltv <= thresholds.ltvMax && row.ltc <= thresholds.ltcMax && row.cobertura >= 0.25 && row.tir >= thresholds.tirMin && row.moic >= thresholds.moicMin;
+                      const optCell = "bg-emerald-800 text-white font-bold";
+                      const normalCell = (good, marginal) => good ? "bg-emerald-200 text-emerald-800" : marginal ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800";
                       return (
-                        <tr key={i} className={`${isBase ? "bg-blue-50 font-bold" : allGreen ? "bg-emerald-100" : ""}`}>
-                          <td className={`p-1.5 text-center font-mono ${allGreen && !isBase ? "font-bold text-emerald-800" : ""}`}>{fmtUSD(row.capital)}{allGreen ? " ✓" : ""}</td>
-                          <td className={`p-1.5 text-center font-mono ${allGreen && !isBase ? "font-bold text-emerald-800" : ""}`}>{fmtUSD(row.equityTotal)}</td>
-                          <td className={`p-1.5 text-center font-mono ${allGreen && !isBase ? "font-bold text-emerald-800" : ""}`}>{fmtUSD(row.prestamo)}</td>
-                          <td className={`p-1.5 text-center font-mono ${row.ltv <= thresholds.ltvMax ? "bg-emerald-200 text-emerald-800" : row.ltv <= thresholds.ltvMax * 1.15 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(row.ltv)}</td>
-                          <td className={`p-1.5 text-center font-mono ${row.ltc <= thresholds.ltcMax ? "bg-emerald-200 text-emerald-800" : row.ltc <= thresholds.ltcMax * 1.15 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(row.ltc)}</td>
-                          <td className={`p-1.5 text-center font-mono ${row.cobertura >= 0.25 ? "bg-emerald-200 text-emerald-800" : row.cobertura >= 0.15 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(row.cobertura)}</td>
-                          <td className={`p-1.5 text-center font-mono ${row.tir >= thresholds.tirMin ? "bg-emerald-200 text-emerald-800" : row.tir >= thresholds.tirMin * 0.75 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(row.tir)}</td>
-                          <td className={`p-1.5 text-center font-mono ${row.moic >= thresholds.moicMin ? "bg-emerald-200 text-emerald-800" : "bg-amber-200 text-amber-800"}`}>{row.moic.toFixed(3)}x</td>
+                        <tr key={i} className={isBase && !allGreen ? "bg-blue-50 font-bold" : ""}>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{fmtUSD(row.capital)}{allGreen ? " ✓" : ""}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{fmtUSD(row.equityTotal)}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{fmtUSD(row.prestamo)}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : normalCell(row.ltv <= thresholds.ltvMax, row.ltv <= thresholds.ltvMax * 1.15)}`}>{fmtPct(row.ltv)}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : normalCell(row.ltc <= thresholds.ltcMax, row.ltc <= thresholds.ltcMax * 1.15)}`}>{fmtPct(row.ltc)}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : normalCell(row.cobertura >= 0.25, row.cobertura >= 0.15)}`}>{fmtPct(row.cobertura)}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : normalCell(row.tir >= thresholds.tirMin, row.tir >= thresholds.tirMin * 0.75)}`}>{fmtPct(row.tir)}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : normalCell(row.moic >= thresholds.moicMin, true)}`}>{row.moic.toFixed(3)}x</td>
                         </tr>
                       );
                     })}
