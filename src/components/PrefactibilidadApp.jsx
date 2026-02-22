@@ -169,11 +169,12 @@ function calcSensitivity(sup, mix, thresholds, metricKey, varRow, varCol, baseRo
 // UI COMPONENTS
 // ═══════════════════════════════════════════════
 
-function InputField({ label, value, onChange, type = "number", step, suffix, prefix, min, max, small }) {
+function InputField({ label, value, onChange, type = "number", step, suffix, prefix, min, max, small, required }) {
   const displayVal = type === "number" && (value === 0 || value === "0") ? "" : value;
+  const isEmpty = required && (value === 0 || value === "" || value == null);
   return (
     <div className={`flex flex-col ${small ? "gap-0.5" : "gap-1"}`}>
-      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</label>
+      <label className={`text-xs font-medium uppercase tracking-wide ${isEmpty ? "text-red-500" : "text-slate-500"}`}>{label}{required ? " *" : ""}</label>
       <div className="flex items-center gap-1">
         {prefix && <span className="text-sm text-slate-400">{prefix}</span>}
         <input
@@ -185,7 +186,7 @@ function InputField({ label, value, onChange, type = "number", step, suffix, pre
           step={step}
           min={min}
           max={max}
-          className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+          className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
         />
         {suffix && <span className="text-sm text-slate-400 whitespace-nowrap">{suffix}</span>}
       </div>
@@ -194,12 +195,13 @@ function InputField({ label, value, onChange, type = "number", step, suffix, pre
 }
 
 // Campo para montos grandes: muestra con comas (1,334,541) pero edita como número crudo
-function MoneyInput({ label, value, onChange, prefix = "$", step = 100 }) {
+function MoneyInput({ label, value, onChange, prefix = "$", step = 100, required }) {
   const [editing, setEditing] = useState(false);
   const [raw, setRaw] = useState("");
+  const isEmpty = required && value === 0;
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</label>
+      <label className={`text-xs font-medium uppercase tracking-wide ${isEmpty ? "text-red-500" : "text-slate-500"}`}>{label}{required ? " *" : ""}</label>
       <div className="flex items-center gap-1">
         {prefix && <span className="text-sm text-slate-400">{prefix}</span>}
         {editing ? (
@@ -211,14 +213,14 @@ function MoneyInput({ label, value, onChange, prefix = "$", step = 100 }) {
             onFocus={e => e.target.select()}
             onBlur={() => setEditing(false)}
             step={step}
-            className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+            className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
           />
         ) : (
           <div
             onClick={() => { setRaw(value === 0 ? "" : String(value)); setEditing(true); }}
-            className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono text-slate-800 cursor-text hover:border-blue-400"
+            className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 cursor-text hover:border-blue-400 ${isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
           >
-            {value === 0 ? <span className="text-slate-400">0</span> : fmt(value)}
+            {value === 0 ? <span className={isEmpty ? "text-red-400" : "text-slate-400"}>0</span> : fmt(value)}
           </div>
         )}
       </div>
@@ -246,11 +248,12 @@ function InlineMoney({ value, onChange, step = 1000, min = 0 }) {
 }
 
 // Campo especial para porcentajes: muestra 75 pero guarda 0.75 internamente
-function PctField({ label, value, onChange, step = 0.5, min = 0, max = 100 }) {
+function PctField({ label, value, onChange, step = 0.5, min = 0, max = 100, required }) {
   const displayVal = value === 0 ? "" : Math.round(value * 10000) / 100;
+  const isEmpty = required && value === 0;
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</label>
+      <label className={`text-xs font-medium uppercase tracking-wide ${isEmpty ? "text-red-500" : "text-slate-500"}`}>{label}{required ? " *" : ""}</label>
       <div className="flex items-center gap-1">
         <input
           type="number"
@@ -261,7 +264,7 @@ function PctField({ label, value, onChange, step = 0.5, min = 0, max = 100 }) {
           step={step}
           min={min}
           max={max}
-          className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+          className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
         />
         <span className="text-sm text-slate-400">%</span>
       </div>
@@ -370,6 +373,21 @@ function SensTable({ title, data, rowLabel, colLabel, format, pctVar, metric, th
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════
+// PRINT DISCLAIMER
+// ═══════════════════════════════════════════════
+function PrintDisclaimer() {
+  return (
+    <div className="print-disclaimer" style={{display:"none"}}>
+      <div style={{marginTop:"16px",borderTop:"1px solid #cbd5e1",paddingTop:"8px",fontSize:"7.5px",color:"#64748b",lineHeight:"1.4"}}>
+        <p style={{margin:"0 0 3px 0"}}><strong>AVISO LEGAL:</strong> Este documento es una proyección financiera preliminar generada con fines informativos y de análisis interno. <strong>No constituye un estudio de factibilidad formal, ni una recomendación de inversión.</strong> Los resultados están basados exclusivamente en los supuestos ingresados por el usuario y pueden variar significativamente respecto a los resultados reales del proyecto.</p>
+        <p style={{margin:"0 0 3px 0"}}>Se recomienda complementar este análisis con estudios de mercado, avalúos formales, revisión legal y asesoría financiera profesional antes de tomar decisiones de inversión.</p>
+        <p style={{margin:0}}><strong>© {new Date().getFullYear()} ESTATEisREAL — Todos los derechos reservados.</strong> Queda prohibida la reproducción total o parcial de este documento sin autorización expresa.</p>
       </div>
     </div>
   );
@@ -664,9 +682,9 @@ export default function PrefactibilidadApp() {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Proyecto</h3>
               <div className="grid grid-cols-3 gap-3">
-                <InputField label="Nombre" value={sup.proyecto} onChange={v => updateSup("proyecto", v)} type="text" />
-                <InputField label="Ubicación" value={sup.ubicacion} onChange={v => updateSup("ubicacion", v)} type="text" />
-                <InputField label="Fecha" value={sup.fecha} onChange={v => updateSup("fecha", v)} type="date" />
+                <InputField label="Nombre" value={sup.proyecto} onChange={v => updateSup("proyecto", v)} type="text" required />
+                <InputField label="Ubicación" value={sup.ubicacion} onChange={v => updateSup("ubicacion", v)} type="text" required />
+                <InputField label="Fecha" value={sup.fecha} onChange={v => updateSup("fecha", v)} type="date" required />
               </div>
             </div>
 
@@ -674,8 +692,8 @@ export default function PrefactibilidadApp() {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Terreno</h3>
               <div className="grid grid-cols-3 gap-3">
-                <InputField label="Área Terreno" value={sup.areaTerreno} onChange={v => updateSup("areaTerreno", v)} suffix="m²" />
-                <MoneyInput label="Precio Total Terreno" value={sup.precioTerreno} onChange={v => updateSup("precioTerreno", v)} />
+                <InputField label="Área Terreno" value={sup.areaTerreno} onChange={v => updateSup("areaTerreno", v)} suffix="m²" required />
+                <MoneyInput label="Precio Total Terreno" value={sup.precioTerreno} onChange={v => updateSup("precioTerreno", v)} required />
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Precio / m² terreno</label>
                   <div className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded text-sm font-mono text-slate-700">
@@ -686,8 +704,8 @@ export default function PrefactibilidadApp() {
             </div>
 
             {/* Mix de Producto */}
-            <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Mix de Producto</h3>
+            <div className={`bg-white rounded-lg border p-4 ${mix.some(u => u.qty > 0 && u.m2 > 0 && u.precioUd > 0) ? "border-slate-200" : "border-red-400 border-2"}`}>
+              <h3 className={`text-sm font-bold mb-3 uppercase tracking-wide ${mix.some(u => u.qty > 0 && u.m2 > 0 && u.precioUd > 0) ? "text-slate-700" : "text-red-500"}`}>Mix de Producto {mix.some(u => u.qty > 0 && u.m2 > 0 && u.precioUd > 0) ? "" : "*"}</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -730,11 +748,11 @@ export default function PrefactibilidadApp() {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Costos del Proyecto</h3>
               <div className="grid grid-cols-3 gap-3">
-                <MoneyInput label="Costo de construcción por m² vendible" value={sup.costoM2} onChange={v => updateSup("costoM2", v)} step={50} />
-                <PctField label="Costos blandos (% del ingreso total)" value={sup.softCosts} onChange={v => updateSup("softCosts", v)} step={0.5} />
-                <PctField label="Comisión inmobiliaria (% del ingreso)" value={sup.comisionVenta} onChange={v => updateSup("comisionVenta", v)} step={0.5} />
-                <PctField label="Publicidad y mercadeo (% del ingreso)" value={sup.marketing} onChange={v => updateSup("marketing", v)} step={0.1} />
-                <PctField label="Contingencias (% del costo de construcción)" value={sup.contingencias} onChange={v => updateSup("contingencias", v)} step={0.5} />
+                <MoneyInput label="Costo de construcción por m² vendible" value={sup.costoM2} onChange={v => updateSup("costoM2", v)} step={50} required />
+                <PctField label="Costos blandos (% del ingreso total)" value={sup.softCosts} onChange={v => updateSup("softCosts", v)} step={0.5} required />
+                <PctField label="Comisión inmobiliaria (% del ingreso)" value={sup.comisionVenta} onChange={v => updateSup("comisionVenta", v)} step={0.5} required />
+                <PctField label="Publicidad y mercadeo (% del ingreso)" value={sup.marketing} onChange={v => updateSup("marketing", v)} step={0.1} required />
+                <PctField label="Contingencias (% del costo de construcción)" value={sup.contingencias} onChange={v => updateSup("contingencias", v)} step={0.5} required />
                 <PctField label="Fee del desarrollador (% del ingreso)" value={sup.devFee} onChange={v => updateSup("devFee", v)} step={0.5} />
               </div>
             </div>
@@ -743,10 +761,10 @@ export default function PrefactibilidadApp() {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Financiamiento Bancario</h3>
               <div className="grid grid-cols-4 gap-3">
-                <PctField label="% del costo total a financiar (LTC)" value={sup.pctFinanciamiento} onChange={v => updateSup("pctFinanciamiento", v)} step={5} />
-                <PctField label="Tasa de interés anual del banco" value={sup.tasaInteres} onChange={v => updateSup("tasaInteres", v)} step={0.5} />
+                <PctField label="% del costo total a financiar (LTC)" value={sup.pctFinanciamiento} onChange={v => updateSup("pctFinanciamiento", v)} step={5} required />
+                <PctField label="Tasa de interés anual del banco" value={sup.tasaInteres} onChange={v => updateSup("tasaInteres", v)} step={0.5} required />
                 <div className="flex flex-col gap-1">
-                  <PctField label="Uso promedio del préstamo durante obra" value={sup.drawFactor} onChange={v => updateSup("drawFactor", v)} step={5} />
+                  <PctField label="Uso promedio del préstamo durante obra" value={sup.drawFactor} onChange={v => updateSup("drawFactor", v)} step={5} required />
                   <span className="text-xs text-slate-400">El banco no desembolsa todo de una vez. Ej: 60% significa que en promedio solo usas el 60% del préstamo durante la obra. Rango típico: 50%–65%.</span>
                 </div>
                 <PctField label="Comisión bancaria al cierre del préstamo" value={sup.comisionBanco} onChange={v => updateSup("comisionBanco", v)} step={0.5} />
@@ -757,11 +775,11 @@ export default function PrefactibilidadApp() {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Cronograma y Preventas</h3>
               <div className="grid grid-cols-3 gap-3">
-                <InputField label="Meses de pre-desarrollo y permisos" value={sup.mesesPredev} onChange={v => updateSup("mesesPredev", v)} suffix="meses" />
-                <InputField label="Meses de construcción" value={sup.mesesConstruccion} onChange={v => updateSup("mesesConstruccion", v)} suffix="meses" />
-                <InputField label="Meses de entrega" value={sup.mesesPostVenta} onChange={v => updateSup("mesesPostVenta", v)} suffix="meses" />
-                <PctField label="% de unidades vendidas durante construcción" value={sup.preventaPct} onChange={v => updateSup("preventaPct", v)} step={5} />
-                <PctField label="% del precio cobrado antes de entrega" value={sup.cobroPct} onChange={v => updateSup("cobroPct", v)} step={5} />
+                <InputField label="Meses de pre-desarrollo y permisos" value={sup.mesesPredev} onChange={v => updateSup("mesesPredev", v)} suffix="meses" required />
+                <InputField label="Meses de construcción" value={sup.mesesConstruccion} onChange={v => updateSup("mesesConstruccion", v)} suffix="meses" required />
+                <InputField label="Meses de entrega" value={sup.mesesPostVenta} onChange={v => updateSup("mesesPostVenta", v)} suffix="meses" required />
+                <PctField label="% de unidades vendidas durante construcción" value={sup.preventaPct} onChange={v => updateSup("preventaPct", v)} step={5} required />
+                <PctField label="% del precio cobrado antes de entrega" value={sup.cobroPct} onChange={v => updateSup("cobroPct", v)} step={5} required />
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Duración total estimada</label>
                   <div className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded text-sm font-mono text-slate-700">
@@ -782,7 +800,7 @@ export default function PrefactibilidadApp() {
                   </div>
                   <span className="text-xs text-slate-400">Equivale al valor del terreno</span>
                 </div>
-                <MoneyInput label="Aporte en efectivo del socio capitalista" value={sup.equityCapital} onChange={v => updateSup("equityCapital", v)} />
+                <MoneyInput label="Aporte en efectivo del socio capitalista" value={sup.equityCapital} onChange={v => updateSup("equityCapital", v)} required />
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total inversión de los socios</label>
                   <div className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded text-sm font-mono font-bold text-slate-700">
@@ -824,6 +842,7 @@ export default function PrefactibilidadApp() {
                 <PctField label="LTC máximo (préstamo/costo)" value={thresholds.ltcMax} onChange={v => updateThresh("ltcMax", v)} step={1} />
               </div>
             </div>
+          <PrintDisclaimer />
           </div>
         </div>
 
@@ -967,6 +986,7 @@ export default function PrefactibilidadApp() {
                 </div>
               </div>
             </div>
+          <PrintDisclaimer />
           </div>
         </div>
 
@@ -1159,6 +1179,7 @@ export default function PrefactibilidadApp() {
               </div>
               <p className="text-xs text-slate-500 mt-2 italic">A menor capital, mayor TIR (mayor apalancamiento) pero mayor riesgo financiero (LTV/LTC más altos). Fila azul = escenario base actual. Filas verdes con ✓ = escenarios óptimos donde todos los parámetros cumplen los umbrales.</p>
             </div>
+          <PrintDisclaimer />
           </div>
         </div>
 
@@ -1247,6 +1268,7 @@ export default function PrefactibilidadApp() {
                 </div>
               </div>
             </div>
+          <PrintDisclaimer />
           </div>
         </div>
       </div>

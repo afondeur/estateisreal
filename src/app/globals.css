@@ -170,4 +170,8 @@ input, select, textarea {
   .text-sm {
     font-size: 0.75rem !important;
   }
+  /* Disclaimer legal en cada sección */
+  .print-disclaimer {
+    display: block !important;
+  }
 }
