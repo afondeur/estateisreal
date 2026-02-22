@@ -170,6 +170,7 @@ function calcSensitivity(sup, mix, thresholds, metricKey, varRow, varCol, baseRo
 // ═══════════════════════════════════════════════
 
 function InputField({ label, value, onChange, type = "number", step, suffix, prefix, min, max, small }) {
+  const displayVal = type === "number" && (value === 0 || value === "0") ? "" : value;
   return (
     <div className={`flex flex-col ${small ? "gap-0.5" : "gap-1"}`}>
       <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</label>
@@ -177,9 +178,10 @@ function InputField({ label, value, onChange, type = "number", step, suffix, pre
         {prefix && <span className="text-sm text-slate-400">{prefix}</span>}
         <input
           type={type}
-          value={value}
+          value={displayVal}
           onChange={e => onChange(type === "number" ? parseFloat(e.target.value) || 0 : e.target.value)}
           onFocus={e => e.target.select()}
+          placeholder="0"
           step={step}
           min={min}
           max={max}
@@ -213,10 +215,10 @@ function MoneyInput({ label, value, onChange, prefix = "$", step = 100 }) {
           />
         ) : (
           <div
-            onClick={() => { setRaw(String(value)); setEditing(true); }}
+            onClick={() => { setRaw(value === 0 ? "" : String(value)); setEditing(true); }}
             className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono text-slate-800 cursor-text hover:border-blue-400"
           >
-            {fmt(value)}
+            {value === 0 ? <span className="text-slate-400">0</span> : fmt(value)}
           </div>
         )}
       </div>
@@ -236,27 +238,30 @@ function InlineMoney({ value, onChange, step = 1000, min = 0 }) {
       className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400" />
   );
   return (
-    <div onClick={() => { setRaw(String(value)); setEditing(true); }}
+    <div onClick={() => { setRaw(value === 0 ? "" : String(value)); setEditing(true); }}
       className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-800 cursor-text hover:border-blue-400">
-      {fmt(value)}
+      {value === 0 ? <span className="text-slate-400">0</span> : fmt(value)}
     </div>
   );
 }
 
 // Campo especial para porcentajes: muestra 75 pero guarda 0.75 internamente
 function PctField({ label, value, onChange, step = 0.5, min = 0, max = 100 }) {
+  const displayVal = value === 0 ? "" : Math.round(value * 10000) / 100;
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</label>
       <div className="flex items-center gap-1">
         <input
           type="number"
-          value={Math.round(value * 10000) / 100}
+          value={displayVal}
           onChange={e => onChange((parseFloat(e.target.value) || 0) / 100)}
+          onFocus={e => e.target.select()}
+          placeholder="0"
           step={step}
           min={min}
           max={max}
-          className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+          className="w-full px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
         />
         <span className="text-sm text-slate-400">%</span>
       </div>
@@ -688,8 +693,8 @@ export default function PrefactibilidadApp() {
                         <td className="p-2">
                           <input className="w-full px-1 py-0.5 text-sm border border-slate-200 rounded" value={u.tipo} onChange={e => updateMix(i, "tipo", e.target.value)} />
                         </td>
-                        <td className="p-1"><input type="number" className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono" value={u.qty} onChange={e => updateMix(i, "qty", parseInt(e.target.value) || 0)} min={0} /></td>
-                        <td className="p-1"><input type="number" className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono" value={u.m2} onChange={e => updateMix(i, "m2", parseFloat(e.target.value) || 0)} min={0} /></td>
+                        <td className="p-1"><input type="number" className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-800" value={u.qty === 0 ? "" : u.qty} onChange={e => updateMix(i, "qty", parseInt(e.target.value) || 0)} onFocus={e => e.target.select()} placeholder="0" min={0} /></td>
+                        <td className="p-1"><input type="number" className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-800" value={u.m2 === 0 ? "" : u.m2} onChange={e => updateMix(i, "m2", parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()} placeholder="0" min={0} /></td>
                         <td className="p-1"><InlineMoney value={u.precioUd} onChange={v => updateMix(i, "precioUd", v)} /></td>
                         <td className="p-2 text-right font-mono text-slate-600 text-xs">{u.m2 > 0 ? fmtUSD(u.precioUd / u.m2) : "—"}</td>
                         <td className="p-2 text-right font-mono font-medium text-xs">{fmtUSD(u.qty * u.precioUd)}</td>
