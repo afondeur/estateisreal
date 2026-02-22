@@ -135,6 +135,11 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
+  // Refrescar perfil manualmente (después de pago Stripe, etc.)
+  const refreshProfile = useCallback(async () => {
+    if (user) await fetchProfile(user.id);
+  }, [user]);
+
   // Tier del usuario
   const emailLower = user?.email?.toLowerCase().trim() || "";
   const isAdmin = ADMIN_EMAILS.includes(emailLower);
@@ -152,6 +157,7 @@ export function AuthProvider({ children }) {
       logout,
       trackEvent,
       saveFeedback,
+      refreshProfile,
       tier,
       isAdmin,
     }}>

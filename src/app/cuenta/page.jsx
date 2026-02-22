@@ -1,12 +1,29 @@
 "use client";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/Navbar";
 
-export default function CuentaPage() {
-  const { user, profile, tier, isAdmin, logout } = useAuth();
+function CuentaContent() {
+  const { user, profile, tier, isAdmin, logout, refreshProfile } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // Refrescar perfil al volver de Stripe con ?success=true
+  useEffect(() => {
+    if (searchParams.get("success") === "true" && user) {
+      setShowSuccess(true);
+      const refresh = async () => {
+        for (let i = 0; i < 5; i++) {
+          await new Promise(r => setTimeout(r, 2000));
+          await refreshProfile();
+        }
+      };
+      refresh();
+    }
+  }, [searchParams, user, refreshProfile]);
 
   if (!user) {
     return (
@@ -31,7 +48,12 @@ export default function CuentaPage() {
         <div className="max-w-2xl mx-auto space-y-6">
           <h1 className="text-2xl font-bold text-slate-100">Mi Cuenta</h1>
 
-          {/* Info del usuario */}
+          {showSuccess && (
+            <div className="bg-emerald-900/30 border border-emerald-600 rounded-xl p-4 text-center">
+              <p className="text-emerald-300 font-bold">¡Pago completado! Tu cuenta se está actualizando a Pro...</p>
+            </div>
+          )}
+
           <div className="bg-slate-700 rounded-2xl shadow-sm border border-slate-600 p-6">
             <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-4">Información Personal</h2>
             <div className="space-y-3">
@@ -58,7 +80,6 @@ export default function CuentaPage() {
             </div>
           </div>
 
-          {/* Plan actual */}
           <div className={`rounded-2xl shadow-sm border p-6 ${isPremium ? "bg-blue-900/30 border-blue-700" : "bg-slate-700 border-slate-600"}`}>
             <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-4">Tu Plan</h2>
             <div className="flex items-center justify-between">
@@ -79,7 +100,6 @@ export default function CuentaPage() {
             </div>
           </div>
 
-          {/* CTA Cambiar a Premium */}
           {!isPremium && (
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 text-white text-center">
               <h3 className="text-lg font-bold mb-2">Desbloquea todo el potencial</h3>
@@ -90,12 +110,19 @@ export default function CuentaPage() {
             </div>
           )}
 
-          {/* Cerrar sesión */}
           <button onClick={() => { logout(); router.push("/"); }} className="text-sm text-red-400 hover:text-red-300 transition">
             Cerrar sesión
           </button>
         </div>
       </div>
     </>
+  );
+}
+
+export default function CuentaPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-800" />}>
+      <CuentaContent />
+    </Suspense>
   );
 }
