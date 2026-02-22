@@ -404,7 +404,7 @@ function PrintDisclaimer() {
 // ═══════════════════════════════════════════════
 
 export default function PrefactibilidadApp() {
-  const { trackEvent, saveFeedback: saveFeedbackToDb, tier } = useAuth();
+  const { trackEvent, saveFeedback: saveFeedbackToDb, tier, isAdmin } = useAuth();
   const [sup, setSup] = useState(DEFAULT_SUPUESTOS);
   const [mix, setMix] = useState(DEFAULT_MIX);
   const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
@@ -420,6 +420,28 @@ export default function PrefactibilidadApp() {
   const updateSup = useCallback((key, val) => setSup(prev => ({ ...prev, [key]: val })), []);
   const updateMix = useCallback((idx, key, val) => setMix(prev => prev.map((u, i) => i === idx ? { ...u, [key]: val } : u)), []);
   const updateThresh = useCallback((key, val) => setThresholds(prev => ({ ...prev, [key]: val })), []);
+
+  // Llenado rápido (solo admin)
+  const llenadoRapido = useCallback(() => {
+    setSup({
+      proyecto: "Proyecto 1", ubicacion: "Santiago, RD", fecha: "2026-02-22",
+      areaTerreno: 1332, precioTerreno: 275000,
+      costoM2: 950, softCosts: 0.025, devFee: 0.03, comisionVenta: 0.05, marketing: 0.003, contingencias: 0.02,
+      pctFinanciamiento: 0.60, tasaInteres: 0.11, drawFactor: 0.55, comisionBanco: 0.01,
+      mesesPredev: 6, mesesConstruccion: 18, mesesPostVenta: 6,
+      preventaPct: 0.75, cobroPct: 0.25,
+      equityCapital: 300000,
+      parqueosDisenados: 33, ratioResidente: 1, divisorVisita: 10, pctDiscapacidad: 0.04,
+    });
+    setMix([
+      { tipo: "Tipo 1", qty: 10, m2: 82, precioUd: 140000 },
+      { tipo: "Tipo 2", qty: 10, m2: 93, precioUd: 150000 },
+      { tipo: "Tipo 3", qty: 0, m2: 0, precioUd: 0 },
+      { tipo: "Tipo 4", qty: 0, m2: 0, precioUd: 0 },
+      { tipo: "Tipo 5", qty: 0, m2: 0, precioUd: 0 },
+      { tipo: "Tipo 6", qty: 0, m2: 0, precioUd: 0 },
+    ]);
+  }, []);
 
   // Validación de campos obligatorios
   const validateFields = useCallback(() => {
@@ -944,7 +966,15 @@ export default function PrefactibilidadApp() {
             </div>
 
             {/* Botón Generar Análisis */}
-            <div className="no-print flex justify-center pt-2 pb-4">
+            <div className="no-print flex justify-center gap-3 pt-2 pb-4">
+              {isAdmin && (
+                <button
+                  onClick={llenadoRapido}
+                  className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 text-sm font-bold rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95"
+                >
+                  ⚡ Llenado Rápido
+                </button>
+              )}
               <button
                 onClick={handleGenerar}
                 className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white text-lg font-bold rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95"
