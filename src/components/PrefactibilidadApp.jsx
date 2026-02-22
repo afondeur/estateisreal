@@ -972,7 +972,7 @@ export default function PrefactibilidadApp() {
                     <tr>
                       <th className="p-1.5 text-left bg-slate-100 text-slate-500">Tasa anual ↓ \ Meses obra →</th>
                       {sensTirTasaDuracion.colLabels.map((l, i) => (
-                        <th key={l} className={`p-1.5 text-center ${i === 2 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
+                        <th key={i} className={`p-1.5 text-center ${i === 2 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1003,7 +1003,7 @@ export default function PrefactibilidadApp() {
                     <tr>
                       <th className="p-1.5 text-left bg-slate-100 text-slate-500">Var. costo ↓ \ % Preventas →</th>
                       {sensMargenPreventas.colLabels.map((l, i) => (
-                        <th key={l} className={`p-1.5 text-center ${i === 2 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
+                        <th key={i} className={`p-1.5 text-center ${i === 2 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1034,7 +1034,7 @@ export default function PrefactibilidadApp() {
                     <tr>
                       <th className="p-1.5 text-left bg-slate-100 text-slate-500">% Financ. ↓ \ Capital socios →</th>
                       {sensTirFinanciamiento.colLabels.map((l, i) => (
-                        <th key={l} className={`p-1.5 text-center ${i === 2 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
+                        <th key={i} className={`p-1.5 text-center ${i === 2 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1065,7 +1065,7 @@ export default function PrefactibilidadApp() {
                     <tr>
                       <th className="p-1.5 text-left bg-slate-100 text-slate-500">% Financ. ↓ \ Capital socios →</th>
                       {sensMoicFinanciamiento.colLabels.map((l, i) => (
-                        <th key={l} className={`p-1.5 text-center ${i === 2 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
+                        <th key={i} className={`p-1.5 text-center ${i === 2 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
                       ))}
                     </tr>
                   </thead>

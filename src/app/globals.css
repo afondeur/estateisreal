@@ -68,15 +68,21 @@ input, select, textarea {
   .no-print {
     display: none !important;
     height: 0 !important;
+    max-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
+    line-height: 0 !important;
+    font-size: 0 !important;
+    border: none !important;
   }
   /* Eliminar min-height para evitar página en blanco */
   .min-h-screen {
     background: white !important;
     min-height: 0 !important;
     height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
   /* Todas las secciones se muestran en print */
   .print-section {
@@ -93,6 +99,16 @@ input, select, textarea {
   }
   .avoid-break {
     page-break-inside: avoid;
+  }
+  /* Evitar que tarjetas se corten entre páginas */
+  .bg-white.rounded-lg {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  /* Tablas completas no se cortan */
+  table {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
   /* Compactar espaciado para menos desperdicio */
   .space-y-4 > * + * {
