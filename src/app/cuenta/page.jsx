@@ -12,7 +12,7 @@ export default function CuentaPage() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="min-h-screen bg-slate-800 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-bold text-slate-800 mb-2">Inicia sesión para ver tu cuenta</h2>
             <Link href="/login" className="text-blue-600 hover:text-blue-500 font-medium">Ir a login</Link>
@@ -27,7 +27,7 @@ export default function CuentaPage() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-slate-50 py-8 px-4">
+      <div className="min-h-screen bg-slate-800 py-8 px-4">
         <div className="max-w-2xl mx-auto space-y-6">
           <h1 className="text-2xl font-bold text-slate-800">Mi Cuenta</h1>
 
