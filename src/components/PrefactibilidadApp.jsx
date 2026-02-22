@@ -1120,11 +1120,12 @@ export default function PrefactibilidadApp() {
                   <tbody>
                     {sensEstructura.map((row, i) => {
                       const isBase = Math.abs(row.capital - sup.equityCapital) < 5000;
+                      const allGreen = row.ltv <= thresholds.ltvMax && row.ltc <= thresholds.ltcMax && row.cobertura >= 0.25 && row.tir >= thresholds.tirMin && row.moic >= thresholds.moicMin;
                       return (
-                        <tr key={i} className={isBase ? "bg-blue-50 font-bold" : ""}>
-                          <td className="p-1.5 text-center font-mono">{fmtUSD(row.capital)}</td>
-                          <td className="p-1.5 text-center font-mono">{fmtUSD(row.equityTotal)}</td>
-                          <td className="p-1.5 text-center font-mono">{fmtUSD(row.prestamo)}</td>
+                        <tr key={i} className={`${isBase ? "bg-blue-50 font-bold" : allGreen ? "bg-emerald-100" : ""}`}>
+                          <td className={`p-1.5 text-center font-mono ${allGreen && !isBase ? "font-bold text-emerald-800" : ""}`}>{fmtUSD(row.capital)}{allGreen ? " ✓" : ""}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen && !isBase ? "font-bold text-emerald-800" : ""}`}>{fmtUSD(row.equityTotal)}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen && !isBase ? "font-bold text-emerald-800" : ""}`}>{fmtUSD(row.prestamo)}</td>
                           <td className={`p-1.5 text-center font-mono ${row.ltv <= thresholds.ltvMax ? "bg-emerald-200 text-emerald-800" : row.ltv <= thresholds.ltvMax * 1.15 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(row.ltv)}</td>
                           <td className={`p-1.5 text-center font-mono ${row.ltc <= thresholds.ltcMax ? "bg-emerald-200 text-emerald-800" : row.ltc <= thresholds.ltcMax * 1.15 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(row.ltc)}</td>
                           <td className={`p-1.5 text-center font-mono ${row.cobertura >= 0.25 ? "bg-emerald-200 text-emerald-800" : row.cobertura >= 0.15 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(row.cobertura)}</td>
@@ -1136,7 +1137,7 @@ export default function PrefactibilidadApp() {
                   </tbody>
                 </table>
               </div>
-              <p className="text-xs text-slate-500 mt-2 italic">A menor capital, mayor TIR (mayor apalancamiento) pero mayor riesgo financiero (LTV/LTC más altos). La fila resaltada en azul es el escenario base actual.</p>
+              <p className="text-xs text-slate-500 mt-2 italic">A menor capital, mayor TIR (mayor apalancamiento) pero mayor riesgo financiero (LTV/LTC más altos). Fila azul = escenario base actual. Filas verdes con ✓ = escenarios óptimos donde todos los parámetros cumplen los umbrales.</p>
             </div>
           </div>
         </div>
