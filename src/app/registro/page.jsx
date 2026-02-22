@@ -21,7 +21,7 @@ export default function RegistroPage() {
     if (!name || !email || !password) { setError("Completa todos los campos obligatorios"); return; }
     if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
     setLoading(true);
-    const { error: authError } = await signUp(email, password, name, empresa);
+    const { data, error: authError } = await signUp(email, password, name, empresa);
     setLoading(false);
     if (authError) {
       if (authError.message?.includes("already registered")) {
@@ -31,6 +31,12 @@ export default function RegistroPage() {
       }
       return;
     }
+    // Si el usuario ya tiene sesión activa (email confirm desactivado), ir al home
+    if (data?.session) {
+      router.push("/");
+      return;
+    }
+    // Si necesita confirmar email, mostrar pantalla de éxito
     setSuccess(true);
   };
 

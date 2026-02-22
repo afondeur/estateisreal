@@ -68,15 +68,21 @@ export function AuthProvider({ children }) {
     if (!supabase) return { error: { message: "Servicio no disponible" } };
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) return { error };
-    // Actualizar perfil con nombre y empresa
+    // Actualizar perfil con nombre y empresa (esperar a que el trigger cree el perfil)
     if (data.user) {
       const emailLower = email.toLowerCase().trim();
       const isPro = ADMIN_EMAILS.includes(emailLower) || PREMIUM_EMAILS.includes(emailLower);
-      await supabase.from("profiles").update({
+      // Pequeña espera para que el trigger handle_new_user termine
+      await new Promise(r => setTimeout(r, 500));
+      await supabase.from("profiles").upsert({
+        id: data.user.id,
+        email: emailLower,
         nombre,
         empresa,
         tier: isPro ? "pro" : "free",
-      }).eq("id", data.user.id);
+      });
+      // Refrescar perfil local
+      await fetchProfile(data.user.id);
     }
     return { data };
   }, []);
