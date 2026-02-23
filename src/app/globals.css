@@ -69,6 +69,7 @@ input, select, textarea {
     color: #1e293b !important;
     margin: 0 !important;
     padding: 0 !important;
+    font-size: 11px !important;
   }
   .no-print {
     display: none !important;
@@ -92,48 +93,84 @@ input, select, textarea {
   .avoid-break {
     page-break-inside: avoid;
   }
-  /* Evitar que tarjetas se corten entre páginas */
+  /* Permitir que tarjetas se corten si es necesario para compactar */
   .bg-white.rounded-lg {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
   }
   /* Tablas completas no se cortan */
   table {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
-  /* Compactar espaciado para menos desperdicio */
+  /* ═══ ESPACIADO AGRESIVAMENTE COMPACTO ═══ */
   .space-y-4 > * + * {
-    margin-top: 0.5rem !important;
+    margin-top: 0.25rem !important;
   }
   .pb-8 {
-    padding-bottom: 1rem !important;
+    padding-bottom: 0.25rem !important;
   }
   .p-4 {
-    padding: 0.5rem !important;
+    padding: 0.35rem !important;
   }
   .p-6 {
-    padding: 0.75rem !important;
+    padding: 0.4rem !important;
+  }
+  .p-2 {
+    padding: 0.15rem !important;
+  }
+  .p-1\.5 {
+    padding: 0.1rem !important;
   }
   .mb-3 {
-    margin-bottom: 0.25rem !important;
+    margin-bottom: 0.15rem !important;
+  }
+  .mb-1 {
+    margin-bottom: 0.05rem !important;
   }
   .gap-3 {
-    gap: 0.4rem !important;
+    gap: 0.25rem !important;
+  }
+  .gap-6 {
+    gap: 0.35rem !important;
+  }
+  .py-1 {
+    padding-top: 0.05rem !important;
+    padding-bottom: 0.05rem !important;
+  }
+  .py-1\.5 {
+    padding-top: 0.1rem !important;
+    padding-bottom: 0.1rem !important;
+  }
+  .px-2 {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+  }
+  .mt-2 {
+    margin-top: 0.15rem !important;
+  }
+  .mt-1 {
+    margin-top: 0.05rem !important;
+  }
+  .pt-2 {
+    padding-top: 0.15rem !important;
+  }
+  .space-y-1\.5 > * + * {
+    margin-top: 0.05rem !important;
   }
   /* Header bar de marca en cada sección */
   .print-header-bar {
     display: flex !important;
     background: #1a2332 !important;
     color: white !important;
-    padding: 6px 12px;
-    margin: 0 0 8px 0;
+    padding: 4px 10px;
+    margin: 0 0 4px 0;
     border-radius: 4px;
     justify-content: space-between;
     align-items: center;
   }
   .print-header-bar .brand {
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 900;
     letter-spacing: 0.15em;
   }
@@ -141,7 +178,7 @@ input, select, textarea {
     color: #60a5fa !important;
   }
   .print-header-bar .project-info {
-    font-size: 9px;
+    font-size: 8px;
     text-align: right;
   }
   /* Tarjetas */
@@ -155,12 +192,124 @@ input, select, textarea {
     background: white !important;
     color: #1e293b !important;
   }
-  /* Textos más compactos */
+  /* ═══ SUPUESTOS (pág 1-2): letra más pequeña ═══ */
+  .print-section:first-child {
+    font-size: 9px !important;
+  }
+  .print-section:first-child .text-xs {
+    font-size: 0.55rem !important;
+    line-height: 1.1 !important;
+  }
+  .print-section:first-child .text-sm {
+    font-size: 0.6rem !important;
+    line-height: 1.2 !important;
+  }
+  .print-section:first-child h3 {
+    font-size: 0.6rem !important;
+    margin-bottom: 0.1rem !important;
+  }
+  .print-section:first-child input,
+  .print-section:first-child select {
+    font-size: 0.6rem !important;
+    padding: 0.1rem 0.2rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .print-section:first-child label {
+    font-size: 0.5rem !important;
+    line-height: 1.1 !important;
+  }
+  .print-section:first-child .font-mono {
+    font-size: 0.6rem !important;
+  }
+  .print-section:first-child .grid {
+    gap: 0.2rem !important;
+  }
+  .print-section:first-child .p-4,
+  .print-section:first-child .rounded-lg {
+    padding: 0.25rem !important;
+    margin-bottom: 0.1rem !important;
+  }
+  .print-section:first-child .gap-1 {
+    gap: 0.05rem !important;
+  }
+  .print-section:first-child table th,
+  .print-section:first-child table td {
+    padding: 0.1rem 0.15rem !important;
+    font-size: 0.55rem !important;
+  }
+  .print-section:first-child .text-slate-400 {
+    font-size: 0.45rem !important;
+    line-height: 1.1 !important;
+  }
+  /* ═══ RESULTADOS (pág 3-4): compactar ═══ */
+  .print-section:nth-child(2) {
+    font-size: 9.5px !important;
+  }
+  /* Semáforo más compacto */
+  .print-section:nth-child(2) .rounded-xl.text-center {
+    padding: 0.4rem !important;
+  }
+  .print-section:nth-child(2) .text-4xl {
+    font-size: 1.5rem !important;
+    margin-bottom: 0 !important;
+  }
+  /* Métricas cards más pequeñas */
+  .print-section:nth-child(2) .grid-cols-4 {
+    gap: 0.2rem !important;
+  }
+  .print-section:nth-child(2) .text-2xl {
+    font-size: 1rem !important;
+    line-height: 1.1 !important;
+  }
+  .print-section:nth-child(2) .text-lg {
+    font-size: 0.8rem !important;
+  }
+  .print-section:nth-child(2) h3 {
+    font-size: 0.6rem !important;
+    margin-bottom: 0.1rem !important;
+  }
+  .print-section:nth-child(2) .text-xs {
+    font-size: 0.5rem !important;
+    line-height: 1.1 !important;
+  }
+  .print-section:nth-child(2) .text-sm {
+    font-size: 0.6rem !important;
+    line-height: 1.15 !important;
+  }
+  .print-section:nth-child(2) table th,
+  .print-section:nth-child(2) table td {
+    padding: 0.08rem 0.2rem !important;
+    font-size: 0.55rem !important;
+    line-height: 1.15 !important;
+  }
+  /* Usos y Fuentes compacto */
+  .print-section:nth-child(2) .grid-cols-2 {
+    gap: 0.3rem !important;
+  }
+  .print-section:nth-child(2) .font-mono {
+    font-size: 0.55rem !important;
+    line-height: 1.15 !important;
+  }
+  .print-section:nth-child(2) .w-24 {
+    width: 4.5rem !important;
+  }
+  /* Parqueos compacto */
+  .print-section:nth-child(2) .grid-cols-5 {
+    gap: 0.15rem !important;
+    font-size: 0.55rem !important;
+  }
+  /* Métricas urbanísticas */
+  .print-section:nth-child(2) .italic {
+    font-size: 0.45rem !important;
+    margin-top: 0.05rem !important;
+  }
+  /* ═══ TEXTOS GENERALES más compactos ═══ */
   .text-xs {
-    font-size: 0.65rem !important;
+    font-size: 0.55rem !important;
   }
   .text-sm {
-    font-size: 0.75rem !important;
+    font-size: 0.65rem !important;
   }
   /* Disclaimer legal en cada sección */
   .print-disclaimer {
