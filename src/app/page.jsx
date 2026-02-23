@@ -5,9 +5,9 @@ import PrefactibilidadApp from "../components/PrefactibilidadApp";
 import { useAuth } from "../context/AuthContext";
 
 const EJEMPLO_PAGES = [
-  { src: "/ejemplo/page1.jpg", label: "Supuestos del Proyecto" },
-  { src: "/ejemplo/page2.jpg", label: "Resultados y Métricas" },
-  { src: "/ejemplo/page3.jpg", label: "Sensibilidad" },
+  { src: "/ejemplo/page1.jpg", label: "Métricas y Resultados" },
+  { src: "/ejemplo/page2.jpg", label: "Tablas de Sensibilidad" },
+  { src: "/ejemplo/page3.jpg", label: "Escenarios de Mercado" },
 ];
 
 export default function Home() {
