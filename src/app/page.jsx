@@ -4,7 +4,11 @@ import Navbar from "../components/Navbar";
 import PrefactibilidadApp from "../components/PrefactibilidadApp";
 import { useAuth } from "../context/AuthContext";
 
-const EJEMPLO_PAGES = ["/ejemplo/page1.jpg", "/ejemplo/page2.jpg", "/ejemplo/page3.jpg", "/ejemplo/page4.jpg"];
+const EJEMPLO_PAGES = [
+  { src: "/ejemplo/page1.jpg", label: "Supuestos del Proyecto" },
+  { src: "/ejemplo/page2.jpg", label: "Resultados y Métricas" },
+  { src: "/ejemplo/page3.jpg", label: "Sensibilidad" },
+];
 
 export default function Home() {
   const { user, tier } = useAuth();
@@ -81,16 +85,16 @@ export default function Home() {
             </p>
 
             {/* Preview cards - clickable thumbnails */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
-              {EJEMPLO_PAGES.map((src, i) => (
+            <div className="grid grid-cols-3 gap-5 max-w-3xl mx-auto">
+              {EJEMPLO_PAGES.map((page, i) => (
                 <button
                   key={i}
                   onClick={() => { setPreviewPage(i); setShowPreview(true); }}
                   className="group relative rounded-xl overflow-hidden border border-slate-600 hover:border-blue-400 transition shadow-lg hover:shadow-blue-900/30 bg-white aspect-[3/4]"
                 >
                   <img
-                    src={src}
-                    alt={`Página ${i + 1} del ejemplo`}
+                    src={page.src}
+                    alt={page.label}
                     className="w-full h-full object-cover object-top"
                     draggable={false}
                     onContextMenu={e => e.preventDefault()}
@@ -99,7 +103,7 @@ export default function Home() {
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
                   <div className="absolute bottom-2 left-0 right-0 text-center">
                     <span className="text-xs font-semibold text-white/90 bg-slate-900/60 px-2 py-0.5 rounded">
-                      Página {i + 1}
+                      {page.label}
                     </span>
                   </div>
                   {/* Hover effect */}
@@ -173,8 +177,8 @@ export default function Home() {
             onContextMenu={e => e.preventDefault()}
           >
             <img
-              src={EJEMPLO_PAGES[previewPage]}
-              alt={`Ejemplo página ${previewPage + 1}`}
+              src={EJEMPLO_PAGES[previewPage].src}
+              alt={EJEMPLO_PAGES[previewPage].label}
               className="w-full rounded-lg shadow-2xl pointer-events-none"
               draggable={false}
               style={{ userSelect: "none", WebkitUserSelect: "none" }}
