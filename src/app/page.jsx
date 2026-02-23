@@ -1,16 +1,30 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import PrefactibilidadApp from "../components/PrefactibilidadApp";
 import { useAuth } from "../context/AuthContext";
 
+const EJEMPLO_PAGES = ["/ejemplo/page1.jpg", "/ejemplo/page2.jpg", "/ejemplo/page3.jpg", "/ejemplo/page4.jpg"];
+
 export default function Home() {
   const { user, tier } = useAuth();
   const [analysisStarted, setAnalysisStarted] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewPage, setPreviewPage] = useState(0);
 
   const handleStartAnalysis = () => {
     setAnalysisStarted(true);
   };
+
+  // Disable body scroll when modal is open
+  useEffect(() => {
+    if (showPreview) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [showPreview]);
 
   return (
     <div className="min-h-screen bg-slate-800">
@@ -58,9 +72,148 @@ export default function Home() {
               </div>
             ))}
           </div>
+
+          {/* ═══ EJEMPLO DE REPORTE ═══ */}
+          <div className="mt-20 mb-8">
+            <h2 className="text-2xl font-bold text-white mb-2">Ejemplo de Reporte</h2>
+            <p className="text-slate-400 mb-8 max-w-xl mx-auto">
+              Así luce un análisis completo generado por ESTATEisREAL. Métricas, tablas de costos, sensibilidad y más — todo en un reporte profesional.
+            </p>
+
+            {/* Preview cards - clickable thumbnails */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+              {EJEMPLO_PAGES.map((src, i) => (
+                <button
+                  key={i}
+                  onClick={() => { setPreviewPage(i); setShowPreview(true); }}
+                  className="group relative rounded-xl overflow-hidden border border-slate-600 hover:border-blue-400 transition shadow-lg hover:shadow-blue-900/30 bg-white aspect-[3/4]"
+                >
+                  <img
+                    src={src}
+                    alt={`Página ${i + 1} del ejemplo`}
+                    className="w-full h-full object-cover object-top"
+                    draggable={false}
+                    onContextMenu={e => e.preventDefault()}
+                  />
+                  {/* Gradient overlay on bottom half */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <span className="text-xs font-semibold text-white/90 bg-slate-900/60 px-2 py-0.5 rounded">
+                      Página {i + 1}
+                    </span>
+                  </div>
+                  {/* Hover effect */}
+                  <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/10 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <span className="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow">Ver ejemplo</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => { setPreviewPage(0); setShowPreview(true); }}
+              className="mt-6 inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 font-semibold transition"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Ver reporte completo de ejemplo
+            </button>
+          </div>
         </div>
       ) : (
         <PrefactibilidadApp />
+      )}
+
+      {/* ═══ MODAL VISOR DIFUMINADO ═══ */}
+      {showPreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.85)" }}
+          onClick={() => setShowPreview(false)}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setShowPreview(false)}
+            className="absolute top-4 right-4 z-50 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full w-10 h-10 flex items-center justify-center transition text-xl font-bold"
+          >
+            ✕
+          </button>
+
+          {/* Page indicator */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-800/80 text-white text-sm font-medium px-4 py-1.5 rounded-full">
+            Página {previewPage + 1} de {EJEMPLO_PAGES.length}
+          </div>
+
+          {/* Prev arrow */}
+          {previewPage > 0 && (
+            <button
+              onClick={e => { e.stopPropagation(); setPreviewPage(p => p - 1); }}
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-50 bg-slate-800/70 hover:bg-slate-700 text-white rounded-full w-10 h-10 flex items-center justify-center transition text-lg"
+            >
+              ‹
+            </button>
+          )}
+
+          {/* Next arrow */}
+          {previewPage < EJEMPLO_PAGES.length - 1 && (
+            <button
+              onClick={e => { e.stopPropagation(); setPreviewPage(p => p + 1); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-50 bg-slate-800/70 hover:bg-slate-700 text-white rounded-full w-10 h-10 flex items-center justify-center transition text-lg"
+            >
+              ›
+            </button>
+          )}
+
+          {/* Image container - blurred bottom half with CTA */}
+          <div
+            className="relative max-h-[88vh] max-w-[620px] w-full mx-4 select-none"
+            onClick={e => e.stopPropagation()}
+            onContextMenu={e => e.preventDefault()}
+          >
+            <img
+              src={EJEMPLO_PAGES[previewPage]}
+              alt={`Ejemplo página ${previewPage + 1}`}
+              className="w-full rounded-lg shadow-2xl pointer-events-none"
+              draggable={false}
+              style={{ userSelect: "none", WebkitUserSelect: "none" }}
+            />
+
+            {/* Blur overlay on bottom 40% */}
+            <div
+              className="absolute bottom-0 left-0 right-0 rounded-b-lg flex flex-col items-center justify-end pb-8"
+              style={{
+                height: "45%",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                background: "linear-gradient(to bottom, rgba(15,23,42,0) 0%, rgba(15,23,42,0.6) 40%, rgba(15,23,42,0.9) 100%)",
+              }}
+            >
+              <div className="text-center px-6">
+                <p className="text-white font-bold text-lg mb-1">Obtén reportes completos como este</p>
+                <p className="text-slate-300 text-sm mb-4">Métricas, sensibilidad, escenarios y más — con el plan Pro</p>
+                <a
+                  href="/pricing"
+                  className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm shadow-lg"
+                >
+                  Cambiar a Pro — $25/mes
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Page dots */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex gap-2">
+            {EJEMPLO_PAGES.map((_, i) => (
+              <button
+                key={i}
+                onClick={e => { e.stopPropagation(); setPreviewPage(i); }}
+                className={`w-2.5 h-2.5 rounded-full transition ${i === previewPage ? "bg-blue-400 scale-110" : "bg-slate-500 hover:bg-slate-400"}`}
+              />
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
