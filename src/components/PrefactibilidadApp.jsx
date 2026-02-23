@@ -196,27 +196,39 @@ function evalFormula(input) {
 
 function InputField({ label, value, onChange, type = "number", step, suffix, prefix, min, max, small, required }) {
   const isNum = type === "number";
-  const [formulaMode, setFormulaMode] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [rawText, setRawText] = useState("");
   const displayVal = isNum && (value === 0 || value === "0") ? "" : value;
   const isEmpty = required && (value === 0 || value === "" || value == null);
+  const isFormula = rawText.startsWith("=");
+
+  const handleFocus = (e) => {
+    if (isNum) {
+      setEditing(true);
+      setRawText(value === 0 ? "" : String(value));
+    }
+    setTimeout(() => e.target.select(), 0);
+  };
 
   const handleChange = (e) => {
     const v = e.target.value;
-    if (isNum && v.startsWith("=")) {
-      setFormulaMode(true);
+    if (isNum) {
       setRawText(v);
-      return;
+      if (!v.startsWith("=")) {
+        onChange(parseFloat(v) || 0);
+      }
+    } else {
+      onChange(v);
     }
-    if (formulaMode) { setRawText(v); return; }
-    onChange(isNum ? parseFloat(v) || 0 : v);
   };
 
   const handleBlur = () => {
-    if (formulaMode) {
-      const result = evalFormula(rawText);
-      if (result !== null) onChange(result);
-      setFormulaMode(false);
+    if (isNum) {
+      if (isFormula) {
+        const result = evalFormula(rawText);
+        if (result !== null) onChange(result);
+      }
+      setEditing(false);
       setRawText("");
     }
   };
@@ -227,17 +239,15 @@ function InputField({ label, value, onChange, type = "number", step, suffix, pre
       <div className="flex items-center gap-1">
         {prefix && <span className="text-sm text-slate-400">{prefix}</span>}
         <input
-          type={formulaMode ? "text" : type}
-          value={formulaMode ? rawText : displayVal}
+          type={isNum ? "text" : type}
+          inputMode={isNum && !isFormula ? "decimal" : undefined}
+          value={isNum && editing ? rawText : displayVal}
           onChange={handleChange}
-          onFocus={e => e.target.select()}
+          onFocus={handleFocus}
           onBlur={handleBlur}
-          onKeyDown={e => { if (e.key === "Enter" && formulaMode) { e.target.blur(); } }}
+          onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
           placeholder={isNum ? "0 ó =fórmula" : "0"}
-          step={step}
-          min={min}
-          max={max}
-          className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${formulaMode ? "bg-green-50 border-2 border-green-400" : isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
+          className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isFormula ? "bg-green-50 border-2 border-green-400" : isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
         />
         {suffix && <span className="text-sm text-slate-400 whitespace-nowrap">{suffix}</span>}
       </div>
@@ -276,14 +286,14 @@ function MoneyInput({ label, value, onChange, prefix, step = 100, required }) {
         {prefix && <span className="text-sm text-slate-400">{prefix}</span>}
         {editing ? (
           <input
-            type={isFormula ? "text" : "number"}
+            type="text"
+            inputMode={isFormula ? "text" : "decimal"}
             autoFocus
             value={raw}
             onChange={handleChange}
-            onFocus={e => e.target.select()}
+            onFocus={e => setTimeout(() => e.target.select(), 0)}
             onBlur={handleBlur}
             onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
-            step={step}
             placeholder="0 ó =fórmula"
             className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isFormula ? "bg-green-50 border-2 border-green-400" : isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
           />
@@ -326,12 +336,11 @@ function InlineMoney({ value, onChange, step = 1000, min = 0 }) {
   };
 
   if (editing) return (
-    <input type={isFormula ? "text" : "number"} autoFocus value={raw}
+    <input type="text" inputMode={isFormula ? "text" : "decimal"} autoFocus value={raw}
       onChange={handleChange}
-      onFocus={e => e.target.select()}
+      onFocus={e => setTimeout(() => e.target.select(), 0)}
       onBlur={handleBlur}
       onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
-      step={step} min={min}
       className={`w-full px-1 py-0.5 text-center text-sm rounded font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 ${isFormula ? "bg-green-50 border-2 border-green-400" : "bg-blue-50 border border-blue-200"}`} />
   );
   return (
@@ -347,29 +356,33 @@ function InlineMoney({ value, onChange, step = 1000, min = 0 }) {
 // Campo especial para porcentajes: muestra 75 pero guarda 0.75 internamente
 // Soporta fórmulas: =5+3 → 8% (guarda 0.08)
 function PctField({ label, value, onChange, step = 0.5, min = 0, max = 100, required }) {
-  const displayVal = value === 0 ? "" : Math.round(value * 10000) / 100;
   const isEmpty = required && value === 0;
-  const [formulaMode, setFormulaMode] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [rawText, setRawText] = useState("");
+  const isFormula = rawText.startsWith("=");
+  const displayVal = value === 0 ? "" : Math.round(value * 10000) / 100;
+
+  const handleFocus = (e) => {
+    setEditing(true);
+    setRawText(value === 0 ? "" : String(Math.round(value * 10000) / 100));
+    setTimeout(() => e.target.select(), 0);
+  };
 
   const handleChange = (e) => {
     const v = e.target.value;
-    if (v.startsWith("=")) {
-      setFormulaMode(true);
-      setRawText(v);
-      return;
+    setRawText(v);
+    if (!v.startsWith("=")) {
+      onChange((parseFloat(v) || 0) / 100);
     }
-    if (formulaMode) { setRawText(v); return; }
-    onChange((parseFloat(v) || 0) / 100);
   };
 
   const handleBlur = () => {
-    if (formulaMode) {
+    if (isFormula) {
       const result = evalFormula(rawText);
       if (result !== null) onChange(result / 100);
-      setFormulaMode(false);
-      setRawText("");
     }
+    setEditing(false);
+    setRawText("");
   };
 
   return (
@@ -377,17 +390,15 @@ function PctField({ label, value, onChange, step = 0.5, min = 0, max = 100, requ
       <label className={`text-xs font-medium uppercase tracking-wide ${isEmpty ? "text-red-500" : "text-slate-500"}`}>{label}{required ? " *" : ""}</label>
       <div className="flex items-center gap-1">
         <input
-          type={formulaMode ? "text" : "number"}
-          value={formulaMode ? rawText : displayVal}
+          type="text"
+          inputMode={isFormula ? "text" : "decimal"}
+          value={editing ? rawText : (displayVal === "" ? "" : displayVal)}
           onChange={handleChange}
-          onFocus={e => e.target.select()}
+          onFocus={handleFocus}
           onBlur={handleBlur}
-          onKeyDown={e => { if (e.key === "Enter" && formulaMode) e.target.blur(); }}
+          onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
           placeholder="0 ó =fórmula"
-          step={step}
-          min={min}
-          max={max}
-          className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${formulaMode ? "bg-green-50 border-2 border-green-400" : isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
+          className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isFormula ? "bg-green-50 border-2 border-green-400" : isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
         />
         <span className="text-sm text-slate-400">%</span>
       </div>
