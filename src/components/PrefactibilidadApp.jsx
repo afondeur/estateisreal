@@ -168,27 +168,76 @@ function calcSensitivity(sup, mix, thresholds, metricKey, varRow, varCol, baseRo
 }
 
 // ═══════════════════════════════════════════════
+// FORMULA EVALUATOR — soporta =100+50, =1000*3, =500/2, =1000-200
+// También expresiones complejas: =(100+50)*3, =1000/4+250
+// ═══════════════════════════════════════════════
+function evalFormula(input) {
+  if (typeof input !== "string") return null;
+  const trimmed = input.trim();
+  // Debe empezar con "=" para ser fórmula
+  if (!trimmed.startsWith("=")) return null;
+  const expr = trimmed.slice(1).trim();
+  if (!expr) return null;
+  // Solo permitir números, operadores matemáticos, paréntesis, puntos y espacios (seguridad)
+  if (!/^[\d+\-*/().%\s]+$/.test(expr)) return null;
+  try {
+    // Evaluar de forma segura con Function (sin acceso a scope)
+    const result = new Function(`"use strict"; return (${expr});`)();
+    if (typeof result === "number" && isFinite(result)) return result;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════
 // UI COMPONENTS
 // ═══════════════════════════════════════════════
 
 function InputField({ label, value, onChange, type = "number", step, suffix, prefix, min, max, small, required }) {
-  const displayVal = type === "number" && (value === 0 || value === "0") ? "" : value;
+  const isNum = type === "number";
+  const [formulaMode, setFormulaMode] = useState(false);
+  const [rawText, setRawText] = useState("");
+  const displayVal = isNum && (value === 0 || value === "0") ? "" : value;
   const isEmpty = required && (value === 0 || value === "" || value == null);
+
+  const handleChange = (e) => {
+    const v = e.target.value;
+    if (isNum && v.startsWith("=")) {
+      setFormulaMode(true);
+      setRawText(v);
+      return;
+    }
+    if (formulaMode) { setRawText(v); return; }
+    onChange(isNum ? parseFloat(v) || 0 : v);
+  };
+
+  const handleBlur = () => {
+    if (formulaMode) {
+      const result = evalFormula(rawText);
+      if (result !== null) onChange(result);
+      setFormulaMode(false);
+      setRawText("");
+    }
+  };
+
   return (
     <div className={`flex flex-col ${small ? "gap-0.5" : "gap-1"}`}>
       <label className={`text-xs font-medium uppercase tracking-wide ${isEmpty ? "text-red-500" : "text-slate-500"}`}>{label}{required ? " *" : ""}</label>
       <div className="flex items-center gap-1">
         {prefix && <span className="text-sm text-slate-400">{prefix}</span>}
         <input
-          type={type}
-          value={displayVal}
-          onChange={e => onChange(type === "number" ? parseFloat(e.target.value) || 0 : e.target.value)}
+          type={formulaMode ? "text" : type}
+          value={formulaMode ? rawText : displayVal}
+          onChange={handleChange}
           onFocus={e => e.target.select()}
-          placeholder="0"
+          onBlur={handleBlur}
+          onKeyDown={e => { if (e.key === "Enter" && formulaMode) { e.target.blur(); } }}
+          placeholder={isNum ? "0 ó =fórmula" : "0"}
           step={step}
           min={min}
           max={max}
-          className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
+          className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${formulaMode ? "bg-green-50 border-2 border-green-400" : isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
         />
         {suffix && <span className="text-sm text-slate-400 whitespace-nowrap">{suffix}</span>}
       </div>
@@ -197,10 +246,29 @@ function InputField({ label, value, onChange, type = "number", step, suffix, pre
 }
 
 // Campo para montos grandes: muestra con comas (1,334,541) pero edita como número crudo
+// Soporta fórmulas: =1000*50, =500+300, etc.
 function MoneyInput({ label, value, onChange, prefix, step = 100, required }) {
   const [editing, setEditing] = useState(false);
   const [raw, setRaw] = useState("");
   const isEmpty = required && value === 0;
+  const isFormula = raw.startsWith("=");
+
+  const handleChange = (e) => {
+    const v = e.target.value;
+    setRaw(v);
+    if (!v.startsWith("=")) {
+      onChange(parseFloat(v) || 0);
+    }
+  };
+
+  const handleBlur = () => {
+    if (isFormula) {
+      const result = evalFormula(raw);
+      if (result !== null) onChange(result);
+    }
+    setEditing(false);
+  };
+
   return (
     <div className="flex flex-col gap-1">
       <label className={`text-xs font-medium uppercase tracking-wide ${isEmpty ? "text-red-500" : "text-slate-500"}`}>{label}{required ? " *" : ""}</label>
@@ -208,14 +276,16 @@ function MoneyInput({ label, value, onChange, prefix, step = 100, required }) {
         {prefix && <span className="text-sm text-slate-400">{prefix}</span>}
         {editing ? (
           <input
-            type="number"
+            type={isFormula ? "text" : "number"}
             autoFocus
             value={raw}
-            onChange={e => { setRaw(e.target.value); onChange(parseFloat(e.target.value) || 0); }}
+            onChange={handleChange}
             onFocus={e => e.target.select()}
-            onBlur={() => setEditing(false)}
+            onBlur={handleBlur}
+            onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
             step={step}
-            className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
+            placeholder="0 ó =fórmula"
+            className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isFormula ? "bg-green-50 border-2 border-green-400" : isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
           />
         ) : (
           <div
@@ -233,15 +303,36 @@ function MoneyInput({ label, value, onChange, prefix, step = 100, required }) {
 }
 
 // Campo inline para tabla: muestra con comas, edita crudo
+// Soporta fórmulas: =100*50, =500+300, etc.
 function InlineMoney({ value, onChange, step = 1000, min = 0 }) {
   const [editing, setEditing] = useState(false);
   const [raw, setRaw] = useState("");
+  const isFormula = raw.startsWith("=");
+
+  const handleChange = (e) => {
+    const v = e.target.value;
+    setRaw(v);
+    if (!v.startsWith("=")) {
+      onChange(parseFloat(v) || 0);
+    }
+  };
+
+  const handleBlur = () => {
+    if (isFormula) {
+      const result = evalFormula(raw);
+      if (result !== null) onChange(result);
+    }
+    setEditing(false);
+  };
+
   if (editing) return (
-    <input type="number" autoFocus value={raw}
-      onChange={e => { setRaw(e.target.value); onChange(parseFloat(e.target.value) || 0); }}
+    <input type={isFormula ? "text" : "number"} autoFocus value={raw}
+      onChange={handleChange}
       onFocus={e => e.target.select()}
-      onBlur={() => setEditing(false)} step={step} min={min}
-      className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      onBlur={handleBlur}
+      onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
+      step={step} min={min}
+      className={`w-full px-1 py-0.5 text-center text-sm rounded font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 ${isFormula ? "bg-green-50 border-2 border-green-400" : "bg-blue-50 border border-blue-200"}`} />
   );
   return (
     <div tabIndex={0}
@@ -254,23 +345,49 @@ function InlineMoney({ value, onChange, step = 1000, min = 0 }) {
 }
 
 // Campo especial para porcentajes: muestra 75 pero guarda 0.75 internamente
+// Soporta fórmulas: =5+3 → 8% (guarda 0.08)
 function PctField({ label, value, onChange, step = 0.5, min = 0, max = 100, required }) {
   const displayVal = value === 0 ? "" : Math.round(value * 10000) / 100;
   const isEmpty = required && value === 0;
+  const [formulaMode, setFormulaMode] = useState(false);
+  const [rawText, setRawText] = useState("");
+
+  const handleChange = (e) => {
+    const v = e.target.value;
+    if (v.startsWith("=")) {
+      setFormulaMode(true);
+      setRawText(v);
+      return;
+    }
+    if (formulaMode) { setRawText(v); return; }
+    onChange((parseFloat(v) || 0) / 100);
+  };
+
+  const handleBlur = () => {
+    if (formulaMode) {
+      const result = evalFormula(rawText);
+      if (result !== null) onChange(result / 100);
+      setFormulaMode(false);
+      setRawText("");
+    }
+  };
+
   return (
     <div className="flex flex-col gap-1">
       <label className={`text-xs font-medium uppercase tracking-wide ${isEmpty ? "text-red-500" : "text-slate-500"}`}>{label}{required ? " *" : ""}</label>
       <div className="flex items-center gap-1">
         <input
-          type="number"
-          value={displayVal}
-          onChange={e => onChange((parseFloat(e.target.value) || 0) / 100)}
+          type={formulaMode ? "text" : "number"}
+          value={formulaMode ? rawText : displayVal}
+          onChange={handleChange}
           onFocus={e => e.target.select()}
-          placeholder="0"
+          onBlur={handleBlur}
+          onKeyDown={e => { if (e.key === "Enter" && formulaMode) e.target.blur(); }}
+          placeholder="0 ó =fórmula"
           step={step}
           min={min}
           max={max}
-          className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
+          className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${formulaMode ? "bg-green-50 border-2 border-green-400" : isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
         />
         <span className="text-sm text-slate-400">%</span>
       </div>
