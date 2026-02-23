@@ -15,6 +15,7 @@ const PREMIUM_EMAILS = [
   "aalba@merafondeur.com",
   "cgarcia@merafondeur.com",
   "gilbertol.lora@gmail.com",
+  "lsabater@merafondeur.com",
 ];
 
 export function AuthProvider({ children }) {
