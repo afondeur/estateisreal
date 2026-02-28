@@ -187,7 +187,7 @@ export function AuthProvider({ children }) {
 
   // Tier and admin status — read exclusively from the database
   const isAdmin = profile?.is_admin === true;
-  const tier = profile?.tier || "free";
+  const tier = isAdmin ? "pro" : (profile?.tier || "free");
 
   return (
     <AuthContext.Provider value={{
