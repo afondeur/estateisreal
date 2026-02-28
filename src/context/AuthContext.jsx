@@ -4,20 +4,6 @@ import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 
-// Administradores: acceso total (admin + pro)
-const ADMIN_EMAILS = [
-  "afondeur@gmail.com",
-  "afondeur@merafondeur.com",
-];
-
-// Premium gratis: acceso pro sin funciones de admin
-const PREMIUM_EMAILS = [
-  "aalba@merafondeur.com",
-  "cgarcia@merafondeur.com",
-  "gilbertol.lora@gmail.com",
-  "lsabater@merafondeur.com",
-];
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -70,20 +56,13 @@ export function AuthProvider({ children }) {
     if (!supabase) return { error: { message: "Servicio no disponible" } };
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) return { error };
-    // Actualizar perfil con nombre y empresa (esperar a que el trigger cree el perfil)
+    // Update profile with name and company (wait for trigger to create the profile)
     if (data.user) {
-      const emailLower = email.toLowerCase().trim();
-      const isPro = ADMIN_EMAILS.includes(emailLower) || PREMIUM_EMAILS.includes(emailLower);
-      // Pequeña espera para que el trigger handle_new_user termine
       await new Promise(r => setTimeout(r, 500));
-      await supabase.from("profiles").upsert({
-        id: data.user.id,
-        email: emailLower,
+      await supabase.from("profiles").update({
         nombre,
         empresa,
-        tier: isPro ? "pro" : "free",
-      });
-      // Refrescar perfil local
+      }).eq("id", data.user.id);
       await fetchProfile(data.user.id);
     }
     return { data };
@@ -206,11 +185,9 @@ export function AuthProvider({ children }) {
     return { error };
   }, [user]);
 
-  // Tier del usuario
-  const emailLower = user?.email?.toLowerCase().trim() || "";
-  const isAdmin = ADMIN_EMAILS.includes(emailLower);
-  const isPremiumEmail = PREMIUM_EMAILS.includes(emailLower);
-  const tier = (isAdmin || isPremiumEmail) ? "pro" : (profile?.tier || "free");
+  // Tier and admin status — read exclusively from the database
+  const isAdmin = profile?.is_admin === true;
+  const tier = profile?.tier || "free";
 
   return (
     <AuthContext.Provider value={{

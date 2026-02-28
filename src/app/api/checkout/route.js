@@ -1,33 +1,28 @@
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "../../../lib/supabase-server";
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
-const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
-  ? createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-  : null;
-
-export async function POST(req) {
+export async function POST() {
   try {
-    if (!stripe) {
-      return Response.json({ error: "Stripe no está configurado" }, { status: 503 });
+    // Authenticate from cookies — never trust the request body
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return Response.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    const { email, userId } = await req.json();
-
-    if (!email || !userId) {
-      return Response.json({ error: "Faltan datos del usuario" }, { status: 400 });
+    if (!stripe) {
+      return Response.json({ error: "Stripe no está configurado" }, { status: 503 });
     }
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
-      customer_email: email,
+      customer_email: user.email,
       line_items: [
         {
           price: process.env.STRIPE_PRICE_ID,
@@ -35,8 +30,8 @@ export async function POST(req) {
         },
       ],
       metadata: {
-        userId,
-        email,
+        userId: user.id,
+        email: user.email,
       },
       success_url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://estateisreal.com"}/cuenta?plan=pro&success=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://estateisreal.com"}/pricing?canceled=true`,

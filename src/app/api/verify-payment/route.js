@@ -1,31 +1,26 @@
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient, createSupabaseAdminClient } from "../../../lib/supabase-server";
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
-const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
-  ? createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-  : null;
-
-export async function POST(req) {
+export async function POST() {
   try {
-    if (!stripe || !supabase) {
+    if (!stripe) {
       return Response.json({ error: "Servicio no disponible" }, { status: 503 });
     }
 
-    const { email, userId } = await req.json();
+    // Authenticate from cookies — never trust the request body
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (!email || !userId) {
-      return Response.json({ error: "Faltan datos" }, { status: 400 });
+    if (authError || !user) {
+      return Response.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    // Buscar al customer en Stripe por email
-    const customers = await stripe.customers.list({ email, limit: 1 });
+    // Search Stripe customer by authenticated email
+    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
 
     if (customers.data.length === 0) {
       return Response.json({ tier: "free", reason: "No customer found" });
@@ -33,7 +28,7 @@ export async function POST(req) {
 
     const customer = customers.data[0];
 
-    // Buscar suscripciones activas
+    // Check for active subscriptions
     const subscriptions = await stripe.subscriptions.list({
       customer: customer.id,
       status: "active",
@@ -41,17 +36,18 @@ export async function POST(req) {
     });
 
     if (subscriptions.data.length > 0) {
-      // Tiene suscripción activa → actualizar a pro en Supabase
       const sub = subscriptions.data[0];
 
-      const { error } = await supabase
+      // Use admin client to bypass RLS for profile update
+      const adminClient = createSupabaseAdminClient();
+      const { error } = await adminClient
         .from("profiles")
         .update({
           tier: "pro",
           stripe_customer_id: customer.id,
           stripe_subscription_id: sub.id,
         })
-        .eq("id", userId);
+        .eq("id", user.id);
 
       if (error) {
         console.error("verify-payment: Error actualizando perfil:", error);

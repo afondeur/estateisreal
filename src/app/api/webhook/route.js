@@ -1,24 +1,15 @@
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseAdminClient } from "../../../lib/supabase-server";
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
-const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
-  ? createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-  : null;
-
 export async function POST(req) {
-  console.log("🔔 Webhook recibido");
-  console.log("Stripe configurado:", !!stripe);
-  console.log("Supabase configurado:", !!supabase);
+  console.log("Webhook recibido");
 
   if (!stripe) {
-    console.error("❌ Stripe no configurado - falta STRIPE_SECRET_KEY");
+    console.error("Stripe no configurado - falta STRIPE_SECRET_KEY");
     return Response.json({ error: "Stripe no configurado" }, { status: 503 });
   }
 
@@ -32,11 +23,13 @@ export async function POST(req) {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
-    console.log("✅ Firma webhook verificada. Tipo:", event.type);
+    console.log("Firma webhook verificada. Tipo:", event.type);
   } catch (err) {
-    console.error("❌ Webhook signature verification failed:", err.message);
+    console.error("Webhook signature verification failed:", err.message);
     return Response.json({ error: "Invalid signature" }, { status: 400 });
   }
+
+  const supabase = createSupabaseAdminClient();
 
   switch (event.type) {
     case "checkout.session.completed": {
@@ -46,21 +39,15 @@ export async function POST(req) {
       const customerId = session.customer;
       const subscriptionId = session.subscription;
 
-      console.log("📦 checkout.session.completed:", {
+      console.log("checkout.session.completed:", {
         userId,
         email,
         customerId,
         subscriptionId,
-        hasSupabase: !!supabase,
       });
 
       if (!userId) {
-        console.error("❌ No hay userId en metadata de la sesión");
-        break;
-      }
-
-      if (!supabase) {
-        console.error("❌ Supabase no configurado - falta SUPABASE_SERVICE_ROLE_KEY");
+        console.error("No hay userId en metadata de la sesión");
         break;
       }
 
@@ -75,9 +62,9 @@ export async function POST(req) {
         .select();
 
       if (error) {
-        console.error("❌ Error actualizando perfil:", error);
+        console.error("Error actualizando perfil:", error);
       } else {
-        console.log(`✅ Usuario ${email} actualizado a PRO. Rows:`, data?.length);
+        console.log(`Usuario ${email} actualizado a PRO. Rows:`, data?.length);
       }
       break;
     }
@@ -88,25 +75,25 @@ export async function POST(req) {
       const customerId = subscription.customer;
       const status = subscription.status;
 
-      console.log("📦 subscription event:", { customerId, status });
+      console.log("subscription event:", { customerId, status });
 
-      if (supabase && customerId) {
+      if (customerId) {
         if (status === "canceled" || status === "unpaid" || status === "past_due") {
           const { error } = await supabase
             .from("profiles")
             .update({ tier: "free" })
             .eq("stripe_customer_id", customerId);
 
-          if (error) console.error("❌ Error downgrade:", error);
-          else console.log(`⚠️ Suscripción ${status} → free`);
+          if (error) console.error("Error downgrade:", error);
+          else console.log(`Suscripción ${status} → free`);
         } else if (status === "active") {
           const { error } = await supabase
             .from("profiles")
             .update({ tier: "pro" })
             .eq("stripe_customer_id", customerId);
 
-          if (error) console.error("❌ Error reactivación:", error);
-          else console.log(`✅ Suscripción reactivada → pro`);
+          if (error) console.error("Error reactivación:", error);
+          else console.log(`Suscripción reactivada → pro`);
         }
       }
       break;
@@ -114,12 +101,12 @@ export async function POST(req) {
 
     case "invoice.payment_failed": {
       const invoice = event.data.object;
-      console.log(`❌ Pago fallido para customer ${invoice.customer}`);
+      console.log(`Pago fallido para customer ${invoice.customer}`);
       break;
     }
 
     default:
-      console.log("ℹ️ Evento no manejado:", event.type);
+      console.log("Evento no manejado:", event.type);
       break;
   }
 

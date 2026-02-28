@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import UsageLimitModal from "./UsageLimitModal";
 
 // ═══════════════════════════════════════════════════════════
 // HERRAMIENTA DE PREFACTIBILIDAD INMOBILIARIA v1.0
@@ -552,6 +553,8 @@ export default function PrefactibilidadApp() {
   const [showProjectsPanel, setShowProjectsPanel] = useState(false);
   const [savingProject, setSavingProject] = useState(false);
   const [projectMsg, setProjectMsg] = useState("");
+  const [showUsageLimit, setShowUsageLimit] = useState(false);
+  const [usageCount, setUsageCount] = useState(0);
 
   const updateSup = useCallback((key, val) => setSup(prev => ({ ...prev, [key]: val })), []);
   const updateMix = useCallback((idx, key, val) => setMix(prev => prev.map((u, i) => i === idx ? { ...u, [key]: val } : u)), []);
@@ -685,16 +688,32 @@ export default function PrefactibilidadApp() {
   }, [sup, mix]);
 
   // Generar Análisis
-  const handleGenerar = useCallback(() => {
+  const handleGenerar = useCallback(async () => {
     const errors = validateFields();
     if (errors.length > 0) {
       setValidationErrors(errors);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+
+    // Check usage limit for free users
+    try {
+      const res = await fetch("/api/check-usage");
+      if (res.ok) {
+        const usage = await res.json();
+        if (!usage.allowed) {
+          setUsageCount(usage.count);
+          setShowUsageLimit(true);
+          return;
+        }
+      }
+      // If API fails, fail open — allow the analysis
+    } catch {
+      // Fail open
+    }
+
     setValidationErrors([]);
     setTab("resultados");
-    // Tracking: análisis generado
     trackEvent("analisis_generado", { proyecto: sup.proyecto });
   }, [validateFields, trackEvent, sup.proyecto]);
 
@@ -923,6 +942,12 @@ export default function PrefactibilidadApp() {
 
   return (
     <div className="min-h-screen bg-slate-800">
+      {showUsageLimit && (
+        <UsageLimitModal
+          analysisCount={usageCount}
+          onClose={() => setShowUsageLimit(false)}
+        />
+      )}
       {/* Marca de agua para usuarios free (solo visible en print) */}
       {tier !== "pro" && (
         <div className="print-watermark" aria-hidden="true">
