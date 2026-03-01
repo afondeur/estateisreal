@@ -1209,14 +1209,14 @@ export default function PrefactibilidadApp() {
 
             {/* Financiamiento */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Financiamiento Bancario</h3>
+              <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Financiamiento</h3>
               <div className="grid grid-cols-3 gap-3">
                 <PctField label="Tasa de interés anual del banco" value={sup.tasaInteres} onChange={v => updateSup("tasaInteres", v)} step={0.5} required />
                 <div className="flex flex-col gap-1">
                   <PctField label="Uso promedio del préstamo durante obra" value={sup.drawFactor} onChange={v => updateSup("drawFactor", v)} step={5} required />
-                  <span className="text-xs text-slate-400">El banco no desembolsa todo de una vez. Ej: 60% significa que en promedio solo usas el 60% del préstamo durante la obra. Rango típico: 50%–65%.</span>
+                  <span className="text-xs text-slate-400">El financiador no desembolsa todo de una vez. Ej: 60% significa que en promedio solo usas el 60% del préstamo durante la obra. Rango típico: 50%–65%.</span>
                 </div>
-                <PctField label="Comisión bancaria al cierre del préstamo" value={sup.comisionBanco} onChange={v => updateSup("comisionBanco", v)} step={0.5} />
+                <PctField label="Comisión al cierre del préstamo" value={sup.comisionBanco} onChange={v => updateSup("comisionBanco", v)} step={0.5} />
               </div>
             </div>
 
@@ -1333,7 +1333,7 @@ export default function PrefactibilidadApp() {
                 <MetricCard label="MOIC — Múltiplo sobre Capital" value={r.moic} format="x" threshold={thresholds.moicMin} highlight desc="Veces que el socio recupera su inversión. >1x = ganancia." />
                 <MetricCard label="Incremento sobre Costo (Markup)" value={r.markup} format="x" threshold={thresholds.markupMin} highlight desc="Ingreso ÷ Costo total. Colchón sobre punto de equilibrio." />
                 <MetricCard label="TIR — Tasa Interna de Retorno" value={r.tir} format="pct" threshold={thresholds.tirMin} highlight desc="Retorno anualizado sobre equity. Comparable entre proyectos." />
-                <MetricCard label="LTV — Préstamo vs Valor del proyecto" value={r.ltv} format="pct" threshold={thresholds.ltvMax} type="max" desc="Préstamo ÷ Ingreso total. Menor = menos riesgo bancario." />
+                <MetricCard label="LTV — Préstamo vs Valor del proyecto" value={r.ltv} format="pct" threshold={thresholds.ltvMax} type="max" desc="Préstamo ÷ Ingreso total. Menor = menos riesgo para el financiador." />
                 <MetricCard label="LTC — Préstamo vs Costo total" value={r.ltc} format="pct" threshold={thresholds.ltcMax} type="max" desc="Préstamo ÷ Costo total. Menor = más respaldado por equity." />
                 <MetricCard label="Duración total del proyecto" value={r.mesesTotal} format="num" desc="Pre-desarrollo + construcción + post-venta, en meses." />
               </div>
@@ -1366,9 +1366,8 @@ export default function PrefactibilidadApp() {
                       { l: "UTILIDAD BRUTA", v: r.ingresoTotal - r.costoPreFinan, bold: true, color: r.ingresoTotal - r.costoPreFinan >= 0 ? "text-emerald-700" : "text-red-600", line: true },
                       { l: "", spacer: true },
                       { l: "COSTOS FINANCIEROS", v: null, bold: true, color: "text-slate-700", header: true },
-                      { l: "Préstamo bancario (ref.)", v: r.prestamo, ref: true },
                       { l: "(-) Intereses estimados", v: r.intereses },
-                      { l: "(-) Comisión bancaria", v: r.comisionBancaria },
+                      { l: "(-) Comisión del financiamiento", v: r.comisionBancaria },
                       { l: "TOTAL COSTO FINANCIERO", v: r.costoFinanciero, bold: true, color: "text-red-600", line: true },
                       { l: "", spacer: true },
                       { l: "COSTO TOTAL DEL PROYECTO", v: r.costoTotal, bold: true, color: "text-red-600", line: true },
@@ -1406,8 +1405,8 @@ export default function PrefactibilidadApp() {
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión inmobiliaria</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoComision / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoComision)}</span></span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Publicidad y mercadeo</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoMarketing / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoMarketing)}</span></span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Contingencias</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoContingencias / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoContingencias)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Intereses bancarios</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.intereses / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.intereses)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión bancaria</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.comisionBancaria / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.comisionBancaria)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Intereses del financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.intereses / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.intereses)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión del financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.comisionBancaria / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.comisionBancaria)}</span></span></div>
                     <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL USOS</span><span className="flex gap-3 font-mono"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(r.costoTotal)}</span></span></div>
                   </div>
                 </div>
@@ -1418,7 +1417,7 @@ export default function PrefactibilidadApp() {
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio terreno</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.precioTerreno / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.precioTerreno)}</span></span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio capital</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(sup.equityCapital / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(sup.equityCapital)}</span></span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600 border-t border-slate-200 pt-1"><span className="font-semibold">Total equity (socios)</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right font-semibold">{totalFuentes > 0 ? fmtPct(r.equityTotal / totalFuentes) : "—"}</span><span className="w-24 text-right font-semibold">{fmtUSD(r.equityTotal)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Préstamo bancario</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.prestamo / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.prestamo)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.prestamo / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.prestamo)}</span></span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Preventas cobradas durante construcción</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.preventas / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.preventas)}</span></span></div>
                     <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL FUENTES</span><span className="flex gap-3 font-mono"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(totalFuentes)}</span></span></div>
                   </div>
@@ -1652,7 +1651,7 @@ export default function PrefactibilidadApp() {
 
             {/* Tabla 7: Estructura Óptima de Capital */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <h4 className="text-sm font-bold text-slate-700 mb-3">7. Estructura Óptima — ¿Cuál es el balance ideal entre capital propio y deuda bancaria?</h4>
+              <h4 className="text-sm font-bold text-slate-700 mb-3">7. Estructura Óptima — ¿Cuál es el balance ideal entre capital propio y financiamiento?</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
