@@ -538,7 +538,7 @@ function PrintDisclaimer() {
 // MAIN APP
 // ═══════════════════════════════════════════════
 
-export default function PrefactibilidadApp() {
+export default function PrefactibilidadApp({ initialShowProjects = false }) {
   const { trackEvent, saveFeedback: saveFeedbackToDb, tier, isAdmin, user, saveProject, listProjects, loadProject, deleteProject } = useAuth();
   const [sup, setSup] = useState(DEFAULT_SUPUESTOS);
   const [mix, setMix] = useState(DEFAULT_MIX);
@@ -556,7 +556,7 @@ export default function PrefactibilidadApp() {
   // ─── Estado de proyectos guardados ───
   const [currentProjectId, setCurrentProjectId] = useState(null);
   const [projects, setProjects] = useState([]);
-  const [showProjectsPanel, setShowProjectsPanel] = useState(false);
+  const [showProjectsPanel, setShowProjectsPanel] = useState(initialShowProjects);
   const [savingProject, setSavingProject] = useState(false);
   const [projectMsg, setProjectMsg] = useState("");
   const [showUsageLimit, setShowUsageLimit] = useState(false);
