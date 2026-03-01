@@ -31,7 +31,7 @@ const DEFAULT_SUPUESTOS = {
   mesesPredev: 0, mesesConstruccion: 0, mesesPostVenta: 0,
   preventaPct: 0, cobroPct: 0,
   equityCapital: 0,
-  parqueosDisenados: 0, ratioResidente: 1, divisorVisita: 10, pctDiscapacidad: 0.04,
+  parqueosDisenados: 0, ratioResidente: 1, divisorVisita: 10, divisorDiscapacidad: 50,
 };
 
 const fmt = (n, dec = 0) => n == null || isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -124,7 +124,7 @@ function calcAll(sup, mix, thresholds) {
   // ─── PARQUEOS ───
   const pResidente = Math.ceil(unidades * sup.ratioResidente);
   const pVisita = sup.divisorVisita > 0 ? Math.floor(unidades / sup.divisorVisita) : 0;
-  const pDiscapacidad = Math.max(1, Math.ceil(pResidente * sup.pctDiscapacidad));
+  const pDiscapacidad = sup.divisorDiscapacidad > 0 && unidades >= sup.divisorDiscapacidad ? Math.floor(unidades / sup.divisorDiscapacidad) : 0;
   const pRequeridos = pResidente + pVisita + pDiscapacidad;
   const pCumple = sup.parqueosDisenados >= pRequeridos;
 
@@ -571,7 +571,7 @@ export default function PrefactibilidadApp() {
       mesesPredev: 6, mesesConstruccion: 18, mesesPostVenta: 6,
       preventaPct: 0.75, cobroPct: 0.25,
       equityCapital: 300000,
-      parqueosDisenados: 33, ratioResidente: 1, divisorVisita: 10, pctDiscapacidad: 0.04,
+      parqueosDisenados: 33, ratioResidente: 1, divisorVisita: 10, divisorDiscapacidad: 50,
     });
     setMix([
       { tipo: "Tipo 1", qty: 10, m2: 82, precioUd: 140000 },
@@ -1252,7 +1252,7 @@ export default function PrefactibilidadApp() {
                 <InputField label="Parqueos incluidos en el diseño" value={sup.parqueosDisenados} onChange={v => updateSup("parqueosDisenados", v)} suffix="uds" />
                 <InputField label="Parqueos por unidad (normativa)" value={sup.ratioResidente} onChange={v => updateSup("ratioResidente", v)} step={0.5} suffix="parq/ud" />
                 <InputField label="1 parqueo de visita cada X unidades" value={sup.divisorVisita} onChange={v => updateSup("divisorVisita", v)} suffix="uds" />
-                <PctField label="% de parqueos para discapacidad" value={sup.pctDiscapacidad} onChange={v => updateSup("pctDiscapacidad", v)} step={0.5} />
+                <InputField label="1 parqueo discapacidad cada X uds" value={sup.divisorDiscapacidad} onChange={v => updateSup("divisorDiscapacidad", v)} suffix="uds" />
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Requeridos / Status</label>
                   <div className={`px-2 py-1.5 rounded text-sm font-bold ${r.pCumple ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
