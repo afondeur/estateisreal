@@ -26,7 +26,7 @@ const DEFAULT_THRESHOLDS = {
 const DEFAULT_SUPUESTOS = {
   proyecto: "", ubicacion: "", fecha: "",
   areaTerreno: 0, precioTerreno: 0,
-  costoM2: 0, softCosts: 0, devFee: 0, comisionVenta: 0, marketing: 0, contingencias: 0,
+  costoM2: 0, softCosts: 0, comisionVenta: 0, marketing: 0, contingencias: 0,
   pctFinanciamiento: 0, tasaInteres: 0, drawFactor: 0, comisionBanco: 0,
   mesesPredev: 0, mesesConstruccion: 0, mesesPostVenta: 0,
   preventaPct: 0, cobroPct: 0,
@@ -56,13 +56,12 @@ function calcAll(sup, mix, thresholds) {
 
   // ─── COSTOS BLANDOS ───
   const costoSoft = ingresoTotal * sup.softCosts;
-  const costoDevFee = ingresoTotal * sup.devFee;
   const costoComision = ingresoTotal * sup.comisionVenta;
   const costoMarketing = ingresoTotal * sup.marketing;
   const costoContingencias = costoConstruccion * sup.contingencias;
 
   // ─── COSTO TOTAL ANTES DE FINANCIAMIENTO ───
-  const costoPreFinan = precioTerreno + costoConstruccion + costoSoft + costoDevFee + costoComision + costoMarketing + costoContingencias;
+  const costoPreFinan = precioTerreno + costoConstruccion + costoSoft + costoComision + costoMarketing + costoContingencias;
 
   // ─── EQUITY ───
   const equityTerreno = precioTerreno;
@@ -128,7 +127,7 @@ function calcAll(sup, mix, thresholds) {
 
   return {
     unidades, m2Vendible, ingresoTotal, precioPromM2, precioPromUd,
-    precioTerreno, precioTerrenoM2, costoConstruccion, costoSoft, costoDevFee, costoComision, costoMarketing, costoContingencias,
+    precioTerreno, precioTerrenoM2, costoConstruccion, costoSoft, costoComision, costoMarketing, costoContingencias,
     costoPreFinan, equityTerreno, equityTotal, preventas, prestamo, intereses, comisionBancaria, costoFinanciero,
     costoTotal, utilidadNeta, mesesTotal,
     roi, moic, markup, margen, tir, ltv, ltc,
@@ -565,7 +564,7 @@ export default function PrefactibilidadApp() {
     setSup({
       proyecto: "Proyecto 1", ubicacion: "Santiago, RD", fecha: "2026-02-22",
       areaTerreno: 1332, precioTerreno: 275000,
-      costoM2: 950, softCosts: 0.025, devFee: 0.03, comisionVenta: 0.05, marketing: 0.003, contingencias: 0.02,
+      costoM2: 950, softCosts: 0.025, comisionVenta: 0.05, marketing: 0.003, contingencias: 0.02,
       pctFinanciamiento: 0.60, tasaInteres: 0.11, drawFactor: 0.55, comisionBanco: 0.01,
       mesesPredev: 6, mesesConstruccion: 18, mesesPostVenta: 6,
       preventaPct: 0.75, cobroPct: 0.25,
@@ -917,8 +916,8 @@ export default function PrefactibilidadApp() {
   }, [sup, mix, thresholds]);
   // Punto de equilibrio — Fórmulas exactas del Excel (TABLERO rows 48-50)
   const breakEven = useMemo(() => {
-    // Excel: costosVariables = blandos + devFee + comision + marketing (% del ingreso)
-    const costosVar = sup.softCosts + sup.devFee + sup.comisionVenta + sup.marketing;
+    // Excel: costosVariables = blandos + comision + marketing (% del ingreso)
+    const costosVar = sup.softCosts + sup.comisionVenta + sup.marketing;
     // Excel: costosFijos = terreno + construccion + contingencias + financiero
     const costosFijos = r.precioTerreno + r.costoConstruccion + r.costoContingencias + r.costoFinanciero;
     // Excel: precioMin/m2 para 15% margen = costosFijos / ((0.85 - costosVar) × m2Vendible)
@@ -1193,7 +1192,6 @@ export default function PrefactibilidadApp() {
                 <PctField label="Comisión inmobiliaria (% del ingreso)" value={sup.comisionVenta} onChange={v => updateSup("comisionVenta", v)} step={0.5} required />
                 <PctField label="Publicidad y mercadeo (% del ingreso)" value={sup.marketing} onChange={v => updateSup("marketing", v)} step={0.1} />
                 <PctField label="Contingencias (% del costo de construcción)" value={sup.contingencias} onChange={v => updateSup("contingencias", v)} step={0.5} />
-                <PctField label="Fee del desarrollador (% del ingreso)" value={sup.devFee} onChange={v => updateSup("devFee", v)} step={0.5} />
               </div>
             </div>
 
@@ -1350,7 +1348,6 @@ export default function PrefactibilidadApp() {
                       { l: "(-) Terreno", v: r.precioTerreno },
                       { l: "(-) Construcción directa", v: r.costoConstruccion },
                       { l: "(-) Costos blandos", v: r.costoSoft },
-                      { l: "(-) Fee desarrollador", v: r.costoDevFee },
                       { l: "(-) Comisión inmobiliaria", v: r.costoComision },
                       { l: "(-) Publicidad y mercadeo", v: r.costoMarketing },
                       { l: "(-) Contingencias", v: r.costoContingencias },
@@ -1405,14 +1402,13 @@ export default function PrefactibilidadApp() {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Fuentes — ¿De dónde sale el dinero?</h4>
-                  {(() => { const totalFuentes = r.equityTotal + r.prestamo + r.preventas + r.costoDevFee; return (
+                  {(() => { const totalFuentes = r.equityTotal + r.prestamo + r.preventas; return (
                   <div className="space-y-1.5 text-sm font-mono">
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio terreno</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.precioTerreno / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.precioTerreno)}</span></span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio capital</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(sup.equityCapital / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(sup.equityCapital)}</span></span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600 border-t border-slate-200 pt-1"><span className="font-semibold">Total equity (socios)</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right font-semibold">{totalFuentes > 0 ? fmtPct(r.equityTotal / totalFuentes) : "—"}</span><span className="w-24 text-right font-semibold">{fmtUSD(r.equityTotal)}</span></span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Préstamo bancario</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.prestamo / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.prestamo)}</span></span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Preventas cobradas en obra</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.preventas / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.preventas)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Fee desarrollador</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.costoDevFee / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoDevFee)}</span></span></div>
                     <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL FUENTES</span><span className="flex gap-3"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(totalFuentes)}</span></span></div>
                   </div>
                   ); })()}
