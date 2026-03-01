@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import UsageLimitModal from "./UsageLimitModal";
 
@@ -20,14 +20,14 @@ const DEFAULT_MIX = [
 
 const DEFAULT_THRESHOLDS = {
   roiMin: 0.18, margenMin: 0.125, moicMin: 1.5, markupMin: 1.25,
-  tirMin: 0.25, ltvMax: 0.55, ltcMax: 0.65
+  tirMin: 0.25, ltvMax: 0.40, ltcMax: 0.50
 };
 
 const DEFAULT_SUPUESTOS = {
   proyecto: "", ubicacion: "", fecha: "",
   areaTerreno: 0, precioTerreno: 0,
   costoM2: 0, softCosts: 0, comisionVenta: 0, marketing: 0, contingencias: 0,
-  pctFinanciamiento: 0, tasaInteres: 0, drawFactor: 0, comisionBanco: 0,
+  tasaInteres: 0, drawFactor: 0, comisionBanco: 0,
   mesesPredev: 0, mesesConstruccion: 0, mesesPostVenta: 0,
   preventaPct: 0, cobroPct: 0,
   equityCapital: 0,
@@ -92,7 +92,10 @@ function calcAll(sup, mix, thresholds) {
   const moic = equityTotal > 0 ? (utilidadNeta + equityTotal) / equityTotal : 0;
   const markup = costoPreFinan > 0 ? ingresoTotal / costoPreFinan : 0;
   const margen = ingresoTotal > 0 ? utilidadNeta / ingresoTotal : 0;
-  const tir = equityTotal > 0 && mesesTotal > 0 ? Math.pow(1 + utilidadNeta / equityTotal, 12 / mesesTotal) - 1 : 0;
+  const tirBase = equityTotal > 0 ? 1 + utilidadNeta / equityTotal : 0;
+  const tir = equityTotal > 0 && mesesTotal > 0
+    ? (tirBase > 0 ? Math.pow(tirBase, 12 / mesesTotal) - 1 : -1)
+    : 0;
   const ltv = ingresoTotal > 0 ? prestamo / ingresoTotal : 0;
   const ltc = costoPreFinan > 0 ? prestamo / costoPreFinan : 0;
 
@@ -152,7 +155,6 @@ function calcSensitivity(sup, mix, thresholds, metricKey, varRow, varCol, baseRo
         if (varName === "precioVenta") m.forEach(u => { u.precioUd = u.precioUd * mult; });
         if (varName === "ingresoTotal") m.forEach(u => { u.precioUd = u.precioUd * mult; });
         if (varName === "tasaInteres") s.tasaInteres = sup.tasaInteres * mult;
-        if (varName === "pctFinanciamiento") s.pctFinanciamiento = sup.pctFinanciamiento * mult;
         if (varName === "equityCapital") s.equityCapital = sup.equityCapital * mult;
         if (varName === "mesesConstruccion") s.mesesConstruccion = Math.round(sup.mesesConstruccion * mult);
         if (varName === "preventaPct") s.preventaPct = sup.preventaPct * mult;
@@ -565,7 +567,7 @@ export default function PrefactibilidadApp() {
       proyecto: "Proyecto 1", ubicacion: "Santiago, RD", fecha: "2026-02-22",
       areaTerreno: 1332, precioTerreno: 275000,
       costoM2: 950, softCosts: 0.025, comisionVenta: 0.05, marketing: 0.003, contingencias: 0.02,
-      pctFinanciamiento: 0.60, tasaInteres: 0.11, drawFactor: 0.55, comisionBanco: 0.01,
+      tasaInteres: 0.11, drawFactor: 0.55, comisionBanco: 0.01,
       mesesPredev: 6, mesesConstruccion: 18, mesesPostVenta: 6,
       preventaPct: 0.75, cobroPct: 0.25,
       equityCapital: 300000,
@@ -666,7 +668,6 @@ export default function PrefactibilidadApp() {
       { key: "costoM2", label: "Costo de construcción por m²" },
       { key: "softCosts", label: "Costos blandos" },
       { key: "comisionVenta", label: "Comisión inmobiliaria" },
-      { key: "pctFinanciamiento", label: "% financiamiento" },
       { key: "tasaInteres", label: "Tasa de interés" },
       { key: "drawFactor", label: "Draw factor" },
       { key: "mesesPredev", label: "Meses de pre-desarrollo" },
@@ -781,8 +782,9 @@ export default function PrefactibilidadApp() {
       const comBanco = r.prestamo * sup.comisionBanco;
       const utilNeta = utilBruta - interes - comBanco;
       const durTotal = sup.mesesPredev + dur + sup.mesesPostVenta;
-      return r.equityTotal > 0 && durTotal > 0
-        ? Math.pow(1 + utilNeta / r.equityTotal, 12 / durTotal) - 1 : 0;
+      if (r.equityTotal <= 0 || durTotal <= 0) return 0;
+      const base = 1 + utilNeta / r.equityTotal;
+      return base > 0 ? Math.pow(base, 12 / durTotal) - 1 : -1;
     }));
     return {
       grid,
@@ -807,7 +809,7 @@ export default function PrefactibilidadApp() {
     const grid = costSteps.map(cs => preventas.map(pv => {
       const costDelta = cs * pctVar;
       const newCostoPreFinan = r.costoPreFinan * (1 + costDelta);
-      const finScale = (1 - pv) / (1 - basePrev);
+      const finScale = basePrev < 1 ? (1 - pv) / (1 - basePrev) : 0;
       const newFinanciero = r.costoFinanciero * finScale;
       return r.ingresoTotal > 0
         ? (r.ingresoTotal - newCostoPreFinan - newFinanciero) / r.ingresoTotal : 0;
@@ -818,16 +820,16 @@ export default function PrefactibilidadApp() {
       colLabels: preventas.map((p, i) => i === 3 ? Math.round(p*100)+"% (Base)" : Math.round(p*100)+"%"),
     };
   }, [sup, r, pctVar]);
-  const sensTirFinanciamiento = useMemo(() => {
-    // Tabla 5: TIR vs % Financiamiento × Capital — 7x7
-    const ltcs = [
-      Math.max(0.10, sup.pctFinanciamiento - 3 * pctVar * 2),
-      Math.max(0.10, sup.pctFinanciamiento - 2 * pctVar * 2),
-      Math.max(0.10, sup.pctFinanciamiento - 1 * pctVar * 2),
-      sup.pctFinanciamiento,
-      Math.min(0.95, sup.pctFinanciamiento + 1 * pctVar * 2),
-      Math.min(0.95, sup.pctFinanciamiento + 2 * pctVar * 2),
-      Math.min(0.95, sup.pctFinanciamiento + 3 * pctVar * 2),
+  const sensTirPreventas = useMemo(() => {
+    // Tabla 5: TIR vs % Preventas × Capital — 7x7
+    const prevPcts = [
+      Math.max(0.05, sup.preventaPct - 0.30),
+      Math.max(0.05, sup.preventaPct - 0.20),
+      Math.max(0.05, sup.preventaPct - 0.10),
+      sup.preventaPct,
+      Math.min(0.95, sup.preventaPct + 0.10),
+      Math.min(0.95, sup.preventaPct + 0.20),
+      Math.min(0.95, sup.preventaPct + 0.30),
     ];
     const capitals = [
       sup.equityCapital * (1 - 3 * pctVar * 5),
@@ -838,31 +840,27 @@ export default function PrefactibilidadApp() {
       sup.equityCapital * (1 + 2 * pctVar * 5),
       sup.equityCapital * (1 + 3 * pctVar * 5),
     ];
-    const utilBruta = r.ingresoTotal - r.costoPreFinan;
-    const grid = ltcs.map(ltc => capitals.map(cap => {
-      const loanScale = sup.pctFinanciamiento > 0 ? ltc / sup.pctFinanciamiento : 1;
-      const interes = r.prestamo * loanScale * sup.tasaInteres * sup.drawFactor * (sup.mesesConstruccion / 12);
-      const utilNeta = utilBruta - interes;
-      const eqTotal = r.precioTerreno + cap;
-      return eqTotal > 0 && r.mesesTotal > 0
-        ? Math.pow(1 + utilNeta / eqTotal, 12 / r.mesesTotal) - 1 : 0;
+    const grid = prevPcts.map(pv => capitals.map(cap => {
+      const s = { ...sup, preventaPct: pv, equityCapital: Math.max(0, cap) };
+      const res = calcAll(s, mix, thresholds);
+      return res.tir;
     }));
     return {
       grid,
-      rowLabels: ltcs.map((l, i) => i === 3 ? Math.round(l*100)+"% (Base)" : Math.round(l*100)+"%"),
-      colLabels: capitals.map((c, i) => i === 3 ? fmt(c/1000)+"K (Base)" : fmt(c/1000)+"K"),
+      rowLabels: prevPcts.map((p, i) => i === 3 ? Math.round(p*100)+"% (Base)" : Math.round(p*100)+"%"),
+      colLabels: capitals.map((c, i) => i === 3 ? fmt(Math.max(0, c)/1000)+"K (Base)" : fmt(Math.max(0, c)/1000)+"K"),
     };
-  }, [sup, r, pctVar]);
-  const sensMoicFinanciamiento = useMemo(() => {
-    // Tabla 6: MOIC vs % Financiamiento × Capital — 7x7
-    const ltcs = [
-      Math.max(0.10, sup.pctFinanciamiento - 3 * pctVar * 2),
-      Math.max(0.10, sup.pctFinanciamiento - 2 * pctVar * 2),
-      Math.max(0.10, sup.pctFinanciamiento - 1 * pctVar * 2),
-      sup.pctFinanciamiento,
-      Math.min(0.95, sup.pctFinanciamiento + 1 * pctVar * 2),
-      Math.min(0.95, sup.pctFinanciamiento + 2 * pctVar * 2),
-      Math.min(0.95, sup.pctFinanciamiento + 3 * pctVar * 2),
+  }, [sup, mix, thresholds, pctVar]);
+  const sensMoicPreventas = useMemo(() => {
+    // Tabla 6: MOIC vs % Preventas × Capital — 7x7
+    const prevPcts = [
+      Math.max(0.05, sup.preventaPct - 0.30),
+      Math.max(0.05, sup.preventaPct - 0.20),
+      Math.max(0.05, sup.preventaPct - 0.10),
+      sup.preventaPct,
+      Math.min(0.95, sup.preventaPct + 0.10),
+      Math.min(0.95, sup.preventaPct + 0.20),
+      Math.min(0.95, sup.preventaPct + 0.30),
     ];
     const capitals = [
       sup.equityCapital * (1 - 3 * pctVar * 5),
@@ -873,29 +871,26 @@ export default function PrefactibilidadApp() {
       sup.equityCapital * (1 + 2 * pctVar * 5),
       sup.equityCapital * (1 + 3 * pctVar * 5),
     ];
-    const utilBruta = r.ingresoTotal - r.costoPreFinan;
-    // Excel: MOIC = (utilNeta + eqTotal) / eqTotal
-    const grid = ltcs.map(ltc => capitals.map(cap => {
-      const loanScale = sup.pctFinanciamiento > 0 ? ltc / sup.pctFinanciamiento : 1;
-      const interes = r.prestamo * loanScale * sup.tasaInteres * sup.drawFactor * (sup.mesesConstruccion / 12);
-      const utilNeta = utilBruta - interes;
-      const eqTotal = r.precioTerreno + cap;
-      return eqTotal > 0 ? (utilNeta + eqTotal) / eqTotal : 0;
+    const grid = prevPcts.map(pv => capitals.map(cap => {
+      const s = { ...sup, preventaPct: pv, equityCapital: Math.max(0, cap) };
+      const res = calcAll(s, mix, thresholds);
+      return res.moic;
     }));
     return {
       grid,
-      rowLabels: ltcs.map((l, i) => i === 3 ? Math.round(l*100)+"% (Base)" : Math.round(l*100)+"%"),
-      colLabels: capitals.map((c, i) => i === 3 ? fmt(c/1000)+"K (Base)" : fmt(c/1000)+"K"),
+      rowLabels: prevPcts.map((p, i) => i === 3 ? Math.round(p*100)+"% (Base)" : Math.round(p*100)+"%"),
+      colLabels: capitals.map((c, i) => i === 3 ? fmt(Math.max(0, c)/1000)+"K (Base)" : fmt(Math.max(0, c)/1000)+"K"),
     };
-  }, [sup, r, pctVar]);
+  }, [sup, mix, thresholds, pctVar]);
   const sensEstructura = useMemo(() => {
     // Tabla 7: Estructura Óptima de Capital
     const capitals = [];
-    for (let c = sup.equityCapital * 0.7; c <= sup.equityCapital * 1.3; c += 30000) capitals.push(Math.round(c));
+    const step = Math.max(10000, Math.round(sup.equityCapital * 0.05 / 5000) * 5000) || 30000;
+    for (let c = sup.equityCapital * 0.7; c <= sup.equityCapital * 1.3; c += step) capitals.push(Math.round(c));
     return capitals.map(cap => {
       const s = { ...sup, equityCapital: cap };
       const res = calcAll(s, mix, thresholds);
-      return { capital: cap, equityTotal: res.equityTotal, prestamo: res.prestamo, ltv: res.ltv, ltc: res.ltc, cobertura: res.equityTotal > 0 ? res.equityTotal / res.costoPreFinan : 0, tir: res.tir, moic: res.moic };
+      return { capital: cap, equityTotal: res.equityTotal, preventas: res.preventas, prestamo: res.prestamo, ltv: res.ltv, ltc: res.ltc, cobertura: res.equityTotal > 0 ? res.equityTotal / res.costoPreFinan : 0, tir: res.tir, moic: res.moic };
     });
   }, [sup, mix, thresholds]);
   // 5 escenarios predefinidos
@@ -1198,8 +1193,7 @@ export default function PrefactibilidadApp() {
             {/* Financiamiento */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Financiamiento Bancario</h3>
-              <div className="grid grid-cols-4 gap-3">
-                <PctField label="% del costo total a financiar (LTC)" value={sup.pctFinanciamiento} onChange={v => updateSup("pctFinanciamiento", v)} step={5} required />
+              <div className="grid grid-cols-3 gap-3">
                 <PctField label="Tasa de interés anual del banco" value={sup.tasaInteres} onChange={v => updateSup("tasaInteres", v)} step={0.5} required />
                 <div className="flex flex-col gap-1">
                   <PctField label="Uso promedio del préstamo durante obra" value={sup.drawFactor} onChange={v => updateSup("drawFactor", v)} step={5} required />
@@ -1554,24 +1548,24 @@ export default function PrefactibilidadApp() {
               </div>
             </div>
 
-            {/* Tabla 5: TIR vs LTC × Equity (custom labels) */}
+            {/* Tabla 5: TIR vs % Preventas × Equity */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <h4 className="text-sm font-bold text-slate-700 mb-3">5. TIR — ¿Qué pasa si pido más o menos al banco, o si los socios ponen más capital?</h4>
+              <h4 className="text-sm font-bold text-slate-700 mb-3">5. TIR — ¿Qué pasa si varían las preventas o si los socios ponen más capital?</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
                   <thead>
                     <tr>
-                      <th className="p-1.5 text-left bg-slate-100 text-slate-500" style={{ width: "13%" }}>% Fin. ↓ \ Capital →</th>
-                      {sensTirFinanciamiento.colLabels.map((l, i) => (
+                      <th className="p-1.5 text-left bg-slate-100 text-slate-500" style={{ width: "13%" }}>% Prev. ↓ \ Capital →</th>
+                      {sensTirPreventas.colLabels.map((l, i) => (
                         <th key={i} className={`p-1.5 text-center ${i === 3 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {sensTirFinanciamiento.grid.map((row, ri) => (
+                    {sensTirPreventas.grid.map((row, ri) => (
                       <tr key={ri}>
                         <td className={`p-1.5 font-medium ${ri === 3 ? "bg-blue-100 font-bold" : "bg-slate-50"} text-slate-600`}>
-                          {sensTirFinanciamiento.rowLabels[ri]}
+                          {sensTirPreventas.rowLabels[ri]}
                         </td>
                         {row.map((v, ci) => (
                           <td key={ci} className={`p-1.5 text-center font-mono ${ri === 3 && ci === 3 ? "font-bold ring-2 ring-blue-400 rounded" : ""} ${v >= thresholds.tirMin ? "bg-emerald-200 text-emerald-800" : v >= thresholds.tirMin * 0.75 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>
@@ -1585,24 +1579,24 @@ export default function PrefactibilidadApp() {
               </div>
             </div>
 
-            {/* Tabla 6: MOIC vs LTC × Equity (custom labels) */}
+            {/* Tabla 6: MOIC vs % Preventas × Equity (custom labels) */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <h4 className="text-sm font-bold text-slate-700 mb-3">6. MOIC — ¿Cuántas veces recuperan su dinero los socios según nivel de deuda y capital?</h4>
+              <h4 className="text-sm font-bold text-slate-700 mb-3">6. MOIC — ¿Cuántas veces recuperan su dinero los socios según nivel de preventas y capital?</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
                   <thead>
                     <tr>
-                      <th className="p-1.5 text-left bg-slate-100 text-slate-500" style={{ width: "13%" }}>% Fin. ↓ \ Capital →</th>
-                      {sensMoicFinanciamiento.colLabels.map((l, i) => (
+                      <th className="p-1.5 text-left bg-slate-100 text-slate-500" style={{ width: "13%" }}>% Prev. ↓ \ Capital →</th>
+                      {sensMoicPreventas.colLabels.map((l, i) => (
                         <th key={i} className={`p-1.5 text-center ${i === 3 ? "bg-blue-100 font-bold" : "bg-slate-100"}`}>{l}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {sensMoicFinanciamiento.grid.map((row, ri) => (
+                    {sensMoicPreventas.grid.map((row, ri) => (
                       <tr key={ri}>
                         <td className={`p-1.5 font-medium ${ri === 3 ? "bg-blue-100 font-bold" : "bg-slate-50"} text-slate-600`}>
-                          {sensMoicFinanciamiento.rowLabels[ri]}
+                          {sensMoicPreventas.rowLabels[ri]}
                         </td>
                         {row.map((v, ci) => (
                           <td key={ci} className={`p-1.5 text-center font-mono ${ri === 3 && ci === 3 ? "font-bold ring-2 ring-blue-400 rounded" : ""} ${v >= thresholds.moicMin ? "bg-emerald-200 text-emerald-800" : v >= thresholds.moicMin * 0.85 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>
@@ -1625,6 +1619,7 @@ export default function PrefactibilidadApp() {
                     <tr className="bg-slate-100">
                       <th className="p-1.5 text-center text-slate-500">Capital</th>
                       <th className="p-1.5 text-center text-slate-500">Equity Total</th>
+                      <th className="p-1.5 text-center text-slate-500">Preventas</th>
                       <th className="p-1.5 text-center text-slate-500">Préstamo</th>
                       <th className="p-1.5 text-center text-slate-500">LTV</th>
                       <th className="p-1.5 text-center text-slate-500">LTC</th>
@@ -1643,6 +1638,7 @@ export default function PrefactibilidadApp() {
                         <tr key={i} className={isBase && !allGreen ? "bg-blue-50 font-bold" : ""}>
                           <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{fmtUSD(row.capital)}{allGreen ? " ✓" : ""}</td>
                           <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{fmtUSD(row.equityTotal)}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{fmtUSD(row.preventas)}</td>
                           <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{fmtUSD(row.prestamo)}</td>
                           <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : normalCell(row.ltv <= thresholds.ltvMax, row.ltv <= thresholds.ltvMax * 1.15)}`}>{fmtPct(row.ltv)}</td>
                           <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : normalCell(row.ltc <= thresholds.ltcMax, row.ltc <= thresholds.ltcMax * 1.15)}`}>{fmtPct(row.ltc)}</td>
