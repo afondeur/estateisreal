@@ -31,7 +31,7 @@ const DEFAULT_SUPUESTOS = {
   mesesPredev: 0, mesesConstruccion: 0, mesesPostVenta: 0,
   preventaPct: 0, cobroPct: 0,
   equityCapital: 0,
-  parqueosDisenados: 0, ratioResidente: 1, divisorVisita: 10, divisorDiscapacidad: 50,
+  parqueosDisenados: 0, ratioResidente: 2, divisorVisita: 10, divisorDiscapacidad: 50,
 };
 
 const fmt = (n, dec = 0) => n == null || isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -574,7 +574,7 @@ export default function PrefactibilidadApp() {
       mesesPredev: 6, mesesConstruccion: 18, mesesPostVenta: 6,
       preventaPct: 0.75, cobroPct: 0.25,
       equityCapital: 300000,
-      parqueosDisenados: 33, ratioResidente: 1, divisorVisita: 10, divisorDiscapacidad: 50,
+      parqueosDisenados: 33, ratioResidente: 2, divisorVisita: 10, divisorDiscapacidad: 50,
     });
     setMix([
       { tipo: "Tipo 1", qty: 10, m2: 82, precioUd: 140000 },
