@@ -831,24 +831,25 @@ export default function PrefactibilidadApp() {
       Math.min(0.95, sup.preventaPct + 0.20),
       Math.min(0.95, sup.preventaPct + 0.30),
     ];
+    const capSpread = Math.min(pctVar * 5, 0.30);
     const capitals = [
-      sup.equityCapital * (1 - 3 * pctVar * 5),
-      sup.equityCapital * (1 - 2 * pctVar * 5),
-      sup.equityCapital * (1 - 1 * pctVar * 5),
+      sup.equityCapital * (1 - 3 * capSpread),
+      sup.equityCapital * (1 - 2 * capSpread),
+      sup.equityCapital * (1 - 1 * capSpread),
       sup.equityCapital,
-      sup.equityCapital * (1 + 1 * pctVar * 5),
-      sup.equityCapital * (1 + 2 * pctVar * 5),
-      sup.equityCapital * (1 + 3 * pctVar * 5),
+      sup.equityCapital * (1 + 1 * capSpread),
+      sup.equityCapital * (1 + 2 * capSpread),
+      sup.equityCapital * (1 + 3 * capSpread),
     ];
     const grid = prevPcts.map(pv => capitals.map(cap => {
-      const s = { ...sup, preventaPct: pv, equityCapital: Math.max(0, cap) };
+      const s = { ...sup, preventaPct: pv, equityCapital: cap };
       const res = calcAll(s, mix, thresholds);
       return res.tir;
     }));
     return {
       grid,
       rowLabels: prevPcts.map((p, i) => i === 3 ? Math.round(p*100)+"% (Base)" : Math.round(p*100)+"%"),
-      colLabels: capitals.map((c, i) => i === 3 ? fmt(Math.max(0, c)/1000)+"K (Base)" : fmt(Math.max(0, c)/1000)+"K"),
+      colLabels: capitals.map((c, i) => i === 3 ? fmt(c/1000)+"K (Base)" : fmt(c/1000)+"K"),
     };
   }, [sup, mix, thresholds, pctVar]);
   const sensMoicPreventas = useMemo(() => {
@@ -862,24 +863,25 @@ export default function PrefactibilidadApp() {
       Math.min(0.95, sup.preventaPct + 0.20),
       Math.min(0.95, sup.preventaPct + 0.30),
     ];
+    const capSpread = Math.min(pctVar * 5, 0.30);
     const capitals = [
-      sup.equityCapital * (1 - 3 * pctVar * 5),
-      sup.equityCapital * (1 - 2 * pctVar * 5),
-      sup.equityCapital * (1 - 1 * pctVar * 5),
+      sup.equityCapital * (1 - 3 * capSpread),
+      sup.equityCapital * (1 - 2 * capSpread),
+      sup.equityCapital * (1 - 1 * capSpread),
       sup.equityCapital,
-      sup.equityCapital * (1 + 1 * pctVar * 5),
-      sup.equityCapital * (1 + 2 * pctVar * 5),
-      sup.equityCapital * (1 + 3 * pctVar * 5),
+      sup.equityCapital * (1 + 1 * capSpread),
+      sup.equityCapital * (1 + 2 * capSpread),
+      sup.equityCapital * (1 + 3 * capSpread),
     ];
     const grid = prevPcts.map(pv => capitals.map(cap => {
-      const s = { ...sup, preventaPct: pv, equityCapital: Math.max(0, cap) };
+      const s = { ...sup, preventaPct: pv, equityCapital: cap };
       const res = calcAll(s, mix, thresholds);
       return res.moic;
     }));
     return {
       grid,
       rowLabels: prevPcts.map((p, i) => i === 3 ? Math.round(p*100)+"% (Base)" : Math.round(p*100)+"%"),
-      colLabels: capitals.map((c, i) => i === 3 ? fmt(Math.max(0, c)/1000)+"K (Base)" : fmt(Math.max(0, c)/1000)+"K"),
+      colLabels: capitals.map((c, i) => i === 3 ? fmt(c/1000)+"K (Base)" : fmt(c/1000)+"K"),
     };
   }, [sup, mix, thresholds, pctVar]);
   const sensEstructura = useMemo(() => {
