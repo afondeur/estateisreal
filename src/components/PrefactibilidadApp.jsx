@@ -102,6 +102,7 @@ function calcAll(sup, mix, thresholds) {
   // ─── MÉTRICAS URBANÍSTICAS ───
   const densidad = sup.areaTerreno > 0 ? unidades / (sup.areaTerreno / 10000) : 0;
   const m2PorUnidad = unidades > 0 ? m2Vendible / unidades : 0;
+  const indiceEdificabilidad = sup.areaTerreno > 0 ? m2Vendible / sup.areaTerreno : 0;
   const costoM2Total = m2Vendible > 0 ? costoTotal / m2Vendible : 0;
 
   // ─── SEMÁFORO GO/NO-GO ───
@@ -137,7 +138,7 @@ function calcAll(sup, mix, thresholds) {
     costoPreFinan, equityTerreno, equityTotal, preventas, prestamo, intereses, comisionBancaria, costoFinanciero,
     costoTotal, utilidadNeta, mesesTotal,
     roi, moic, markup, margen, tir, ltv, ltc,
-    densidad, m2PorUnidad, costoM2Total,
+    densidad, m2PorUnidad, indiceEdificabilidad, costoM2Total,
     checks, cumple, decision, decisionColor,
     pResidente, pVisita, pDiscapacidad, pDisponibleViviendas, pPorUnidad, pExcedenteVenta, pRequeridos, pCumple,
   };
@@ -1418,13 +1419,14 @@ export default function PrefactibilidadApp() {
             {/* Métricas Urbanísticas */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Métricas Urbanísticas</h3>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-5 gap-3">
                 <MetricCard label="Unidades" value={r.unidades} format="num" />
                 <MetricCard label="m² Vendible" value={r.m2Vendible} format="num" />
                 <MetricCard label="Densidad (viv/ha)" value={r.densidad} format="num" />
                 <MetricCard label="m² vendible/ud" value={r.m2PorUnidad} format="num" />
+                <MetricCard label="Edificabilidad" value={r.indiceEdificabilidad} format="num" />
               </div>
-              <p className="text-xs text-slate-500 mt-2 italic">m²/ud — Social: 50–80 | Medio: 80–120 | Premium: 120–200. Tamaño promedio por unidad, define segmento de mercado.</p>
+              <p className="text-xs text-slate-500 mt-2 italic">Edificabilidad — m² vendibles / m² terreno. Conecta normativa con modelo financiero. | m²/ud — Social: 50–80 | Medio: 80–120 | Premium: 120–200.</p>
             </div>
 
             {/* Parqueos */}
