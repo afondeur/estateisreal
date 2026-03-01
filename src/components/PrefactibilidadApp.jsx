@@ -125,6 +125,9 @@ function calcAll(sup, mix, thresholds) {
   const pResidente = Math.ceil(unidades * sup.ratioResidente);
   const pVisita = sup.divisorVisita > 0 ? Math.floor(unidades / sup.divisorVisita) : 0;
   const pDiscapacidad = sup.divisorDiscapacidad > 0 && unidades >= sup.divisorDiscapacidad ? Math.floor(unidades / sup.divisorDiscapacidad) : 0;
+  const pDisponibleViviendas = Math.max(0, sup.parqueosDisenados - pVisita - pDiscapacidad);
+  const pPorUnidad = unidades > 0 ? pDisponibleViviendas / unidades : 0;
+  const pExcedenteVenta = pPorUnidad > 2 ? Math.floor(pDisponibleViviendas - 2 * unidades) : 0;
   const pRequeridos = pResidente + pVisita + pDiscapacidad;
   const pCumple = sup.parqueosDisenados >= pRequeridos;
 
@@ -136,7 +139,7 @@ function calcAll(sup, mix, thresholds) {
     roi, moic, markup, margen, tir, ltv, ltc,
     densidad, m2PorUnidad, costoM2Total,
     checks, cumple, decision, decisionColor,
-    pResidente, pVisita, pDiscapacidad, pRequeridos, pCumple,
+    pResidente, pVisita, pDiscapacidad, pDisponibleViviendas, pPorUnidad, pExcedenteVenta, pRequeridos, pCumple,
   };
 }
 
@@ -1427,14 +1430,36 @@ export default function PrefactibilidadApp() {
             {/* Parqueos */}
             <div className={`rounded-lg border p-4 ${r.pCumple ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Validación Parqueos</h3>
-              <div className="grid grid-cols-5 gap-3 text-sm">
-                <div><span className="text-slate-500">Residentes:</span> <strong>{r.pResidente}</strong></div>
-                <div><span className="text-slate-500">Visitas:</span> <strong>{r.pVisita}</strong></div>
-                <div><span className="text-slate-500">Discapacidad:</span> <strong>{r.pDiscapacidad}</strong></div>
-                <div><span className="text-slate-500">Requeridos:</span> <strong>{r.pRequeridos}</strong></div>
-                <div><span className="text-slate-500">Diseñados:</span> <strong>{sup.parqueosDisenados}</strong>
-                  <span className={`ml-2 font-bold ${r.pCumple ? "text-emerald-600" : "text-red-600"}`}>
-                    {r.pCumple ? "CUMPLE" : "DÉFICIT"}
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-1">
+                  <span className="text-slate-600">Total de Parqueos (diseño)</span>
+                  <strong className="font-mono">{sup.parqueosDisenados}</strong>
+                </div>
+                <div className="flex justify-between items-center border-b border-slate-200 pb-1">
+                  <span className="text-slate-600">Visitantes <span className="text-slate-400 text-xs ml-1">1 cada {sup.divisorVisita} uds</span></span>
+                  <strong className="font-mono text-red-600">− {r.pVisita}</strong>
+                </div>
+                <div className="flex justify-between items-center border-b border-slate-200 pb-1">
+                  <span className="text-slate-600">Discapacidad {r.pDiscapacidad > 0
+                    ? <span className="text-slate-400 text-xs ml-1">1 cada {sup.divisorDiscapacidad} uds</span>
+                    : <span className="text-slate-400 text-xs ml-1">No se requiere</span>}
+                  </span>
+                  <strong className="font-mono text-red-600">− {r.pDiscapacidad}</strong>
+                </div>
+                <div className="flex justify-between items-center border-b border-slate-200 pb-1 pt-1">
+                  <span className="text-slate-700 font-semibold">Disponibles para viviendas</span>
+                  <span><strong className="font-mono">{r.pDisponibleViviendas}</strong> <span className="text-slate-400 text-xs ml-1">({r.pPorUnidad.toFixed(1)} parq/ud)</span></span>
+                </div>
+                {r.pExcedenteVenta > 0 && (
+                  <div className="flex justify-between items-center border-b border-slate-200 pb-1">
+                    <span className="text-slate-600">Disponibles para venta <span className="text-slate-400 text-xs ml-1">(excedente sobre 2/ud)</span></span>
+                    <strong className="font-mono text-blue-600">{r.pExcedenteVenta}</strong>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-1">
+                  <span className="text-slate-700 font-semibold">Cumplimiento normativa</span>
+                  <span className={`font-bold ${r.pCumple ? "text-emerald-600" : "text-red-600"}`}>
+                    {r.pRequeridos} requeridos — {r.pCumple ? "CUMPLE" : "DÉFICIT"}
                   </span>
                 </div>
               </div>
