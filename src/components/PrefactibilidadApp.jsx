@@ -20,7 +20,7 @@ const DEFAULT_MIX = [
 
 const DEFAULT_THRESHOLDS = {
   roiMin: 0.18, margenMin: 0.125, moicMin: 1.5, markupMin: 1.25,
-  tirMin: 0.25, ltvMax: 0.40, ltcMax: 0.50
+  tirMin: 0.25, ltvMax: 0.45, ltcMax: 0.55
 };
 
 const DEFAULT_SUPUESTOS = {
