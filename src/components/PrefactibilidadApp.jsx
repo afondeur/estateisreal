@@ -1326,14 +1326,14 @@ export default function PrefactibilidadApp() {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Estado de Resultados</h3>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs font-mono">
+                <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-slate-100">
                       <th className="p-1.5 text-left text-slate-500">Concepto</th>
-                      <th className="p-1.5 text-right text-slate-500">Total</th>
-                      <th className="p-1.5 text-right text-slate-500">Por Ud</th>
-                      <th className="p-1.5 text-right text-slate-500">Por m²</th>
-                      <th className="p-1.5 text-right text-slate-500">% Ingreso</th>
+                      <th className="p-1.5 text-right text-slate-500 font-mono">Total</th>
+                      <th className="p-1.5 text-right text-slate-500 font-mono">Por Ud</th>
+                      <th className="p-1.5 text-right text-slate-500 font-mono">Por m²</th>
+                      <th className="p-1.5 text-right text-slate-500 font-mono">% Ingreso</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1364,10 +1364,10 @@ export default function PrefactibilidadApp() {
                       return (
                         <tr key={i} className={`${row.line ? "border-t border-slate-300" : ""} ${row.bold ? "font-bold" : "text-slate-600"} ${row.color || ""}`}>
                           <td className={`p-1.5 text-left ${row.header ? "pt-2" : ""}`}>{row.l}</td>
-                          <td className="p-1.5 text-right">{row.v != null ? fmtUSD(row.v) : ""}</td>
-                          <td className="p-1.5 text-right">{perUd != null && !row.header ? fmtUSD(perUd) : ""}</td>
-                          <td className="p-1.5 text-right">{perM2 != null && !row.header ? fmt(perM2, 0) : ""}</td>
-                          <td className="p-1.5 text-right">{pctIng != null && !row.header ? fmtPct(pctIng) : ""}</td>
+                          <td className="p-1.5 text-right font-mono">{row.v != null ? fmtUSD(row.v) : ""}</td>
+                          <td className="p-1.5 text-right font-mono">{perUd != null && !row.header ? fmtUSD(perUd) : ""}</td>
+                          <td className="p-1.5 text-right font-mono">{perM2 != null && !row.header ? fmt(perM2, 0) : ""}</td>
+                          <td className="p-1.5 text-right font-mono">{pctIng != null && !row.header ? fmtPct(pctIng) : ""}</td>
                         </tr>
                       );
                     })}
@@ -1382,28 +1382,28 @@ export default function PrefactibilidadApp() {
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Usos — ¿En qué se necesita el dinero?</h4>
-                  <div className="space-y-1.5 text-sm font-mono">
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Terreno</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.precioTerreno / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.precioTerreno)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Construcción directa</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoConstruccion / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoConstruccion)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Costos blandos</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoSoft / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoSoft)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión inmobiliaria</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoComision / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoComision)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Publicidad y mercadeo</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoMarketing / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoMarketing)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Contingencias</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoContingencias / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoContingencias)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Intereses bancarios</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.intereses / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.intereses)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión bancaria</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.comisionBancaria / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.comisionBancaria)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL USOS</span><span className="flex gap-3"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(r.costoTotal)}</span></span></div>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Terreno</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.precioTerreno / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.precioTerreno)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Construcción directa</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoConstruccion / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoConstruccion)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Costos blandos</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoSoft / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoSoft)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión inmobiliaria</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoComision / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoComision)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Publicidad y mercadeo</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoMarketing / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoMarketing)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Contingencias</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoContingencias / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoContingencias)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Intereses bancarios</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.intereses / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.intereses)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión bancaria</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.comisionBancaria / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.comisionBancaria)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL USOS</span><span className="flex gap-3 font-mono"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(r.costoTotal)}</span></span></div>
                   </div>
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Fuentes — ¿De dónde sale el dinero?</h4>
                   {(() => { const totalFuentes = r.equityTotal + r.prestamo + r.preventas; return (
-                  <div className="space-y-1.5 text-sm font-mono">
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio terreno</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.precioTerreno / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.precioTerreno)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio capital</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(sup.equityCapital / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(sup.equityCapital)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600 border-t border-slate-200 pt-1"><span className="font-semibold">Total equity (socios)</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right font-semibold">{totalFuentes > 0 ? fmtPct(r.equityTotal / totalFuentes) : "—"}</span><span className="w-24 text-right font-semibold">{fmtUSD(r.equityTotal)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Préstamo bancario</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.prestamo / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.prestamo)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Preventas cobradas durante construcción</span><span className="flex gap-3"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.preventas / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.preventas)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL FUENTES</span><span className="flex gap-3"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(totalFuentes)}</span></span></div>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio terreno</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.precioTerreno / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.precioTerreno)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio capital</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(sup.equityCapital / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(sup.equityCapital)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600 border-t border-slate-200 pt-1"><span className="font-semibold">Total equity (socios)</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right font-semibold">{totalFuentes > 0 ? fmtPct(r.equityTotal / totalFuentes) : "—"}</span><span className="w-24 text-right font-semibold">{fmtUSD(r.equityTotal)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Préstamo bancario</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.prestamo / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.prestamo)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Preventas cobradas durante construcción</span><span className="flex gap-3 font-mono"><span className="text-slate-400 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.preventas / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.preventas)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL FUENTES</span><span className="flex gap-3 font-mono"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(totalFuentes)}</span></span></div>
                   </div>
                   ); })()}
                 </div>
