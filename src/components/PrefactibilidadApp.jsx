@@ -117,10 +117,11 @@ function calcAll(sup, mix, thresholds) {
   ];
   const cumple = checks.filter(c => c.tipo === "max" ? c.valor <= c.umbral : c.valor >= c.umbral).length;
   const noCumple = checks.filter(c => c.tipo === "max" ? c.valor > c.umbral * 1.15 : c.valor < c.umbral * 0.75).length;
-  let decision = "PRECAUCIÓN";
-  let decisionColor = "#F59E0B";
-  if (cumple === 7) { decision = "VIABLE"; decisionColor = "#10B981"; }
+  let decision, decisionColor;
+  if (ingresoTotal === 0) { decision = "PENDIENTE"; decisionColor = "#94A3B8"; }
+  else if (cumple === 7) { decision = "VIABLE"; decisionColor = "#10B981"; }
   else if (noCumple >= 4) { decision = "NO VIABLE"; decisionColor = "#EF4444"; }
+  else { decision = "PRECAUCIÓN"; decisionColor = "#F59E0B"; }
 
   // ─── PARQUEOS ───
   const pResidente = Math.ceil(unidades * sup.ratioResidente);
