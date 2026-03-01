@@ -1435,7 +1435,7 @@ export default function PrefactibilidadApp() {
                 <MetricCard label="m² Vendible" value={r.m2Vendible} format="num" />
                 <MetricCard label="Densidad (viv/ha)" value={r.densidad} format="num" />
                 <MetricCard label="m² vendible/ud" value={r.m2PorUnidad} format="num" />
-                <MetricCard label="Edificabilidad" value={r.indiceEdificabilidad} format="num" />
+                <MetricCard label="Edificabilidad (m² vend/m² terreno)" value={r.indiceEdificabilidad} format="num" />
               </div>
               <p className="text-xs text-slate-500 mt-2 italic">Edificabilidad — m² vendibles / m² terreno. Conecta normativa con modelo financiero. | m²/ud — Social: 50–80 | Medio: 80–120 | Premium: 120–200.</p>
             </div>
