@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import UsageLimitModal from "./UsageLimitModal";
 
@@ -599,6 +599,15 @@ export default function PrefactibilidadApp() {
   useEffect(() => {
     if (user) refreshProjects();
   }, [user, refreshProjects]);
+
+  // Mostrar panel automáticamente al entrar si hay proyectos y ninguno cargado
+  const autoShownOnce = useRef(false);
+  useEffect(() => {
+    if (projects.length > 0 && !currentProjectId && !autoShownOnce.current) {
+      autoShownOnce.current = true;
+      setShowProjectsPanel(true);
+    }
+  }, [projects, currentProjectId]);
 
   const handleSaveProject = useCallback(async () => {
     if (!sup.proyecto.trim()) {
