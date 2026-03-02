@@ -18,6 +18,17 @@ export default function Home() {
 
   const [openProjects, setOpenProjects] = useState(false);
 
+  // Soporte para /?proyectos=1 (redirect desde /compartir/[token])
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("proyectos") === "1" && user) {
+      setOpenProjects(true);
+      setAnalysisStarted(true);
+      // Clean up URL without reload
+      window.history.replaceState({}, "", "/");
+    }
+  }, [user]);
+
   const handleStartAnalysis = () => {
     setOpenProjects(false);
     setAnalysisStarted(true);

@@ -1,16 +1,18 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login, loginWithGoogle } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,7 +33,7 @@ export default function LoginPage() {
       }
       return;
     }
-    router.push("/");
+    router.push(redirect?.startsWith("/") ? redirect : "/");
   };
 
   const handleGoogle = async () => {
@@ -85,10 +87,18 @@ export default function LoginPage() {
           </form>
 
           <p className="text-center text-sm text-slate-500 mt-6">
-            ¿No tienes cuenta? <Link href="/registro" className="text-blue-600 hover:text-blue-500 font-medium">Regístrate gratis</Link>
+            ¿No tienes cuenta? <Link href={redirect ? `/registro?redirect=${encodeURIComponent(redirect)}` : "/registro"} className="text-blue-600 hover:text-blue-500 font-medium">Regístrate gratis</Link>
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-800" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

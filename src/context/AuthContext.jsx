@@ -185,6 +185,34 @@ export function AuthProvider({ children }) {
     return { error };
   }, [user]);
 
+  // Generar o recuperar share_token para un proyecto
+  const generateShareToken = useCallback(async (projectId) => {
+    if (!supabase || !user) return { error: { message: "No autenticado" } };
+    try {
+      // Check if project already has a share_token
+      const { data: project, error: fetchError } = await supabase
+        .from("proyectos")
+        .select("share_token")
+        .eq("id", projectId)
+        .eq("user_id", user.id)
+        .single();
+      if (fetchError) return { error: fetchError };
+      if (project.share_token) return { token: project.share_token };
+
+      // Generate and save new token
+      const newToken = crypto.randomUUID();
+      const { error: updateError } = await supabase
+        .from("proyectos")
+        .update({ share_token: newToken })
+        .eq("id", projectId)
+        .eq("user_id", user.id);
+      if (updateError) return { error: updateError };
+      return { token: newToken };
+    } catch (e) {
+      return { error: { message: e.message } };
+    }
+  }, [user]);
+
   // Tier and admin status — read exclusively from the database
   const isAdmin = profile?.is_admin === true;
   const tier = isAdmin ? "pro" : (profile?.tier || "free");
@@ -205,6 +233,7 @@ export function AuthProvider({ children }) {
       listProjects,
       loadProject,
       deleteProject,
+      generateShareToken,
       tier,
       isAdmin,
     }}>

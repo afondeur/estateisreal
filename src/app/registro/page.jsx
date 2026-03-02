@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
 
-export default function RegistroPage() {
+function RegistroForm() {
   const [name, setName] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [email, setEmail] = useState("");
@@ -14,6 +14,8 @@ export default function RegistroPage() {
   const [loading, setLoading] = useState(false);
   const { signUp, loginWithGoogle } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,9 +33,9 @@ export default function RegistroPage() {
       }
       return;
     }
-    // Si el usuario ya tiene sesión activa (email confirm desactivado), ir al home
+    // Si el usuario ya tiene sesión activa (email confirm desactivado), ir al redirect o home
     if (data?.session) {
-      router.push("/");
+      router.push(redirect?.startsWith("/") ? redirect : "/");
       return;
     }
     // Si necesita confirmar email, mostrar pantalla de éxito
@@ -120,10 +122,18 @@ export default function RegistroPage() {
 
           <p className="text-xs text-slate-400 text-center mt-4">Al registrarte aceptas los Términos de Servicio y Política de Privacidad.</p>
           <p className="text-center text-sm text-slate-500 mt-6">
-            ¿Ya tienes cuenta? <Link href="/login" className="text-blue-600 hover:text-blue-500 font-medium">Inicia sesión</Link>
+            ¿Ya tienes cuenta? <Link href={redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : "/login"} className="text-blue-600 hover:text-blue-500 font-medium">Inicia sesión</Link>
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegistroPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-800" />}>
+      <RegistroForm />
+    </Suspense>
   );
 }

@@ -539,7 +539,7 @@ function PrintDisclaimer() {
 // ═══════════════════════════════════════════════
 
 export default function PrefactibilidadApp({ initialShowProjects = false }) {
-  const { trackEvent, saveFeedback: saveFeedbackToDb, tier, isAdmin, user, saveProject, listProjects, loadProject, deleteProject } = useAuth();
+  const { trackEvent, saveFeedback: saveFeedbackToDb, tier, isAdmin, user, saveProject, listProjects, loadProject, deleteProject, generateShareToken } = useAuth();
   const [sup, setSup] = useState(DEFAULT_SUPUESTOS);
   const [mix, setMix] = useState(DEFAULT_MIX);
   const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
@@ -561,6 +561,12 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
   const [projectMsg, setProjectMsg] = useState("");
   const [showUsageLimit, setShowUsageLimit] = useState(false);
   const [usageCount, setUsageCount] = useState(0);
+
+  // ─── Estado de compartir ───
+  const [shareLink, setShareLink] = useState("");
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const updateSup = useCallback((key, val) => setSup(prev => ({ ...prev, [key]: val })), []);
   const updateMix = useCallback((idx, key, val) => setMix(prev => prev.map((u, i) => i === idx ? { ...u, [key]: val } : u)), []);
@@ -669,6 +675,39 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
     setProjectMsg("Nuevo proyecto iniciado");
     setTimeout(() => setProjectMsg(""), 3000);
   }, []);
+
+  const handleShare = useCallback(async (projectId) => {
+    if (!projectId) return;
+    setShareLoading(true);
+    setShareCopied(false);
+    const { token, error } = await generateShareToken(projectId);
+    setShareLoading(false);
+    if (error) {
+      setProjectMsg("Error al generar link de compartir");
+      setTimeout(() => setProjectMsg(""), 3000);
+      return;
+    }
+    setShareLink(`${window.location.origin}/compartir/${token}`);
+    setShowShareModal(true);
+  }, [generateShareToken]);
+
+  const handleCopyShareLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const input = document.createElement("input");
+      input.value = shareLink;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }
+  }, [shareLink]);
 
   // Validación de campos obligatorios
   const validateFields = useCallback(() => {
@@ -998,6 +1037,16 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                 >
                   {savingProject ? "..." : currentProjectId ? "Actualizar" : "Guardar"}
                 </button>
+                {currentProjectId && (
+                  <button
+                    onClick={() => handleShare(currentProjectId)}
+                    disabled={shareLoading}
+                    className="no-print px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-lg transition disabled:opacity-50"
+                    title="Compartir proyecto por link"
+                  >
+                    {shareLoading ? "..." : "Compartir"}
+                  </button>
+                )}
                 <button
                   onClick={() => { setShowProjectsPanel(!showProjectsPanel); if (!showProjectsPanel) refreshProjects(); }}
                   className="no-print px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition"
@@ -1082,8 +1131,15 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                       </div>
                     </button>
                     <button
+                      onClick={() => handleShare(p.id)}
+                      className="ml-3 text-emerald-400 hover:text-emerald-300 text-xs px-2 py-1 rounded hover:bg-emerald-900/30 transition"
+                      title="Compartir proyecto"
+                    >
+                      Compartir
+                    </button>
+                    <button
                       onClick={() => handleDeleteProject(p.id, p.nombre)}
-                      className="ml-3 text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-900/30 transition"
+                      className="ml-1 text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-900/30 transition"
                       title="Eliminar proyecto"
                     >
                       Eliminar
@@ -1092,6 +1148,36 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Compartir */}
+      {showShareModal && (
+        <div className="no-print fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowShareModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-slate-800">Compartir Proyecto</h3>
+              <button onClick={() => setShowShareModal(false)} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+            </div>
+            <p className="text-sm text-slate-500 mb-4">
+              Cualquier persona con este enlace puede obtener una copia independiente del proyecto en su cuenta.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                value={shareLink}
+                className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50"
+                onFocus={e => e.target.select()}
+              />
+              <button
+                onClick={handleCopyShareLink}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${shareCopied ? "bg-emerald-600 text-white" : "bg-blue-600 hover:bg-blue-500 text-white"}`}
+              >
+                {shareCopied ? "Copiado!" : "Copiar"}
+              </button>
+            </div>
           </div>
         </div>
       )}
