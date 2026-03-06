@@ -73,7 +73,7 @@ export function AuthProvider({ children }) {
     if (!supabase) return { error: { message: "Servicio no disponible" } };
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     return { data, error };
   }, []);
