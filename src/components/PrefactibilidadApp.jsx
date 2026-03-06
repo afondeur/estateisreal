@@ -1238,12 +1238,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
               <div className="grid grid-cols-3 gap-3">
                 <InputField label="Área Terreno" value={sup.areaTerreno} onChange={v => updateSup("areaTerreno", v)} suffix="m²" required />
                 <MoneyInput label="Precio Total Terreno" value={sup.precioTerreno} onChange={v => updateSup("precioTerreno", v)} required />
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Precio / m² terreno</label>
-                  <div className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded text-sm font-mono text-slate-700">
-                    {fmt(r.precioTerrenoM2, 2)}
-                  </div>
-                </div>
+                <MoneyInput label="Precio / m² terreno" value={sup.areaTerreno > 0 ? Math.round(sup.precioTerreno / sup.areaTerreno) : 0} onChange={v => updateSup("precioTerreno", v * sup.areaTerreno)} />
               </div>
             </div>
 
@@ -1271,7 +1266,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                         <td className="p-1"><input type="number" className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-800" value={u.qty === 0 ? "" : u.qty} onChange={e => updateMix(i, "qty", parseInt(e.target.value) || 0)} onFocus={e => e.target.select()} placeholder="0" min={0} /></td>
                         <td className="p-1"><input type="number" className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-800" value={u.m2 === 0 ? "" : u.m2} onChange={e => updateMix(i, "m2", parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()} placeholder="0" min={0} /></td>
                         <td className="p-1"><InlineMoney value={u.precioUd} onChange={v => updateMix(i, "precioUd", v)} /></td>
-                        <td className="p-1">{u.m2 > 0 ? <InlineMoney value={Math.round(u.precioUd / u.m2)} onChange={v => updateMix(i, "precioUd", v * u.m2)} /> : <span className="text-xs text-slate-400 text-center block">—</span>}</td>
+                        <td className="p-1">{u.m2 > 0 ? <InlineMoney value={Math.round(u.precioUd / u.m2)} onChange={v => updateMix(i, "precioUd", v * u.m2)} /> : <div className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-400">—</div>}</td>
                         <td className="p-2 text-right font-mono font-medium text-xs">{fmtUSD(u.qty * u.precioUd)}</td>
                       </tr>
                     ))}
