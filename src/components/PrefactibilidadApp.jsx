@@ -1574,7 +1574,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
         </div>
 
         {/* ═══ TAB: SENSIBILIDAD ═══ */}
-        <div className="print-section" style={{ display: tab === "sensibilidad" ? "block" : "none" }}>
+        {tab === "sensibilidad" && <div className="print-section">
           <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span><span style={{marginLeft:"10px",fontSize:"8px",color:"#94a3b8"}}>Prefactibilidad Inmobiliaria v1.0</span></div><div className="project-info">{sup.proyecto && <><strong>{sup.proyecto}</strong> — {sup.ubicacion}<br/>{sup.fecha}</>}</div></div>
           {tier !== "pro" ? (
             <div className="relative">
@@ -1788,10 +1788,10 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
           <PrintDisclaimer />
           </div>
           )}
-        </div>
+        </div>}
 
         {/* ═══ TAB: ESCENARIOS ═══ */}
-        <div className="print-section" style={{ display: tab === "escenarios" ? "block" : "none" }}>
+        {tab === "escenarios" && <div className="print-section">
           <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span><span style={{marginLeft:"10px",fontSize:"8px",color:"#94a3b8"}}>Prefactibilidad Inmobiliaria v1.0</span></div><div className="project-info">{sup.proyecto && <><strong>{sup.proyecto}</strong> — {sup.ubicacion}<br/>{sup.fecha}</>}</div></div>
           {tier !== "pro" ? (
             <div className="relative">
@@ -1899,7 +1899,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
           <PrintDisclaimer />
           </div>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* Footer */}
