@@ -683,9 +683,8 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
     const { token, error } = await generateShareToken(projectId);
     setShareLoading(false);
     if (error) {
-      console.error("Share error:", error);
-      setProjectMsg("Error al compartir: " + (error.message || error.details || JSON.stringify(error)));
-      setTimeout(() => setProjectMsg(""), 5000);
+      setProjectMsg("Error al generar link de compartir");
+      setTimeout(() => setProjectMsg(""), 3000);
       return;
     }
     setShareLink(`${window.location.origin}/compartir/${token}`);
