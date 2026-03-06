@@ -40,6 +40,6 @@ export async function POST() {
     return Response.json({ url: session.url });
   } catch (err) {
     console.error("Error creando sesión de checkout:", err);
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Error al iniciar el pago" }, { status: 500 });
   }
 }

@@ -19,18 +19,23 @@ export async function POST() {
       return Response.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    // Search Stripe customer by authenticated email
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    // Look up stripe_customer_id from the user's profile (trusted DB, not email search)
+    const adminClient = createSupabaseAdminClient();
+    const { data: profile } = await adminClient
+      .from("profiles")
+      .select("stripe_customer_id")
+      .eq("id", user.id)
+      .single();
 
-    if (customers.data.length === 0) {
+    if (!profile?.stripe_customer_id) {
       return Response.json({ tier: "free", reason: "No customer found" });
     }
 
-    const customer = customers.data[0];
+    const customerId = profile.stripe_customer_id;
 
     // Check for active subscriptions
     const subscriptions = await stripe.subscriptions.list({
-      customer: customer.id,
+      customer: customerId,
       status: "active",
       limit: 1,
     });
@@ -39,12 +44,11 @@ export async function POST() {
       const sub = subscriptions.data[0];
 
       // Use admin client to bypass RLS for profile update
-      const adminClient = createSupabaseAdminClient();
       const { error } = await adminClient
         .from("profiles")
         .update({
           tier: "pro",
-          stripe_customer_id: customer.id,
+          stripe_customer_id: customerId,
           stripe_subscription_id: sub.id,
         })
         .eq("id", user.id);
@@ -60,6 +64,6 @@ export async function POST() {
     return Response.json({ tier: "free", reason: "No active subscription" });
   } catch (err) {
     console.error("verify-payment error:", err);
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Error al verificar el pago" }, { status: 500 });
   }
 }

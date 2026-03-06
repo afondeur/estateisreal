@@ -568,7 +568,8 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
 
-  const updateSup = useCallback((key, val) => setSup(prev => ({ ...prev, [key]: val })), []);
+  const NON_NEGATIVE_KEYS = new Set(["areaTerreno","precioTerreno","costoM2","equityCapital","mesesPredev","mesesConstruccion","mesesPostVenta","tasaInteres","drawFactor","comisionBanco","preventaPct","cobroPct","softCosts","comisionVenta","marketing","contingencias"]);
+  const updateSup = useCallback((key, val) => setSup(prev => ({ ...prev, [key]: NON_NEGATIVE_KEYS.has(key) ? Math.max(0, val) : val })), []);
   const updateMix = useCallback((idx, key, val) => setMix(prev => prev.map((u, i) => i === idx ? { ...u, [key]: val } : u)), []);
   const updateThresh = useCallback((key, val) => setThresholds(prev => ({ ...prev, [key]: val })), []);
 
@@ -642,9 +643,9 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       setTimeout(() => setProjectMsg(""), 3000);
       return;
     }
-    setSup(data.supuestos);
-    setMix(data.mix);
-    setThresholds(data.thresholds);
+    setSup({ ...DEFAULT_SUPUESTOS, ...data.supuestos });
+    setMix(data.mix?.length ? data.mix : DEFAULT_MIX);
+    setThresholds({ ...DEFAULT_THRESHOLDS, ...data.thresholds });
     setCurrentProjectId(data.id);
     setShowProjectsPanel(false);
     setProjectMsg("Proyecto cargado: " + data.nombre);
@@ -804,12 +805,13 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
   const r = useMemo(() => calcAll(sup, mix, thresholds), [sup, mix, thresholds]);
 
   // 7 tablas de sensibilidad como en el Excel
-  const sensMargen = useMemo(() => calcSensitivity(sup, mix, thresholds, "margen", "costoM2", "precioVenta", 0, 0, pctVar), [sup, mix, thresholds, pctVar]);
-  const sensRoi = useMemo(() => calcSensitivity(sup, mix, thresholds, "roi", "costoM2", "precioVenta", 0, 0, pctVar), [sup, mix, thresholds, pctVar]);
+  const sensMargen = useMemo(() => tab === "sensibilidad" ? calcSensitivity(sup, mix, thresholds, "margen", "costoM2", "precioVenta", 0, 0, pctVar) : null, [tab, sup, mix, thresholds, pctVar]);
+  const sensRoi = useMemo(() => tab === "sensibilidad" ? calcSensitivity(sup, mix, thresholds, "roi", "costoM2", "precioVenta", 0, 0, pctVar) : null, [tab, sup, mix, thresholds, pctVar]);
   // ─── TABLAS 3-6: Fórmulas simplificadas del Excel ───
   // El Excel usa fórmulas simplificadas que escalan costos desde el caso base,
   // NO recalcula todo el modelo. Esto replica la lógica exacta del TABLERO.
   const sensTirTasaDuracion = useMemo(() => {
+    if (tab !== "sensibilidad") return null;
     // Tabla 3: TIR vs Tasa × Duración — 7x7
     const rates = [
       Math.max(0.01, sup.tasaInteres - 0.06),
@@ -845,8 +847,9 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       rowLabels: rates.map((rt, i) => i === 3 ? (rt*100).toFixed(1)+"% (Base)" : (rt*100).toFixed(1)+"%"),
       colLabels: durations.map((d, i) => i === 3 ? d+" (Base)" : d+"m"),
     };
-  }, [sup, r]);
+  }, [tab, sup, r]);
   const sensMargenPreventas = useMemo(() => {
+    if (tab !== "sensibilidad") return null;
     // Tabla 4: Margen vs Costo × Preventas — 7x7
     const costSteps = [-3, -2, -1, 0, 1, 2, 3];
     const preventas = [
@@ -873,8 +876,9 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       rowLabels: costSteps.map(s => s === 0 ? "Base" : (s > 0 ? "+" : "") + (s * pctVar * 100).toFixed(0) + "%"),
       colLabels: preventas.map((p, i) => i === 3 ? Math.round(p*100)+"% (Base)" : Math.round(p*100)+"%"),
     };
-  }, [sup, r, pctVar]);
+  }, [tab, sup, r, pctVar]);
   const sensTirPreventas = useMemo(() => {
+    if (tab !== "sensibilidad") return null;
     // Tabla 5: TIR vs % Preventas × Capital — 7x7
     const prevPcts = [
       Math.max(0.05, sup.preventaPct - 0.30),
@@ -905,8 +909,9 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       rowLabels: prevPcts.map((p, i) => i === 3 ? Math.round(p*100)+"% (Base)" : Math.round(p*100)+"%"),
       colLabels: capitals.map((c, i) => i === 3 ? fmt(c/1000)+"K (Base)" : fmt(c/1000)+"K"),
     };
-  }, [sup, mix, thresholds, pctVar]);
+  }, [tab, sup, mix, thresholds, pctVar]);
   const sensMoicPreventas = useMemo(() => {
+    if (tab !== "sensibilidad") return null;
     // Tabla 6: MOIC vs % Preventas × Capital — 7x7
     const prevPcts = [
       Math.max(0.05, sup.preventaPct - 0.30),
@@ -937,8 +942,9 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       rowLabels: prevPcts.map((p, i) => i === 3 ? Math.round(p*100)+"% (Base)" : Math.round(p*100)+"%"),
       colLabels: capitals.map((c, i) => i === 3 ? fmt(c/1000)+"K (Base)" : fmt(c/1000)+"K"),
     };
-  }, [sup, mix, thresholds, pctVar]);
+  }, [tab, sup, mix, thresholds, pctVar]);
   const sensEstructura = useMemo(() => {
+    if (tab !== "sensibilidad") return null;
     // Tabla 7: Estructura Óptima de Capital
     const capitals = [];
     const step = Math.max(10000, Math.round(sup.equityCapital * 0.05 / 5000) * 5000) || 30000;
@@ -948,9 +954,10 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       const res = calcAll(s, mix, thresholds);
       return { capital: cap, equityTotal: res.equityTotal, preventas: res.preventas, prestamo: res.prestamo, ltv: res.ltv, ltc: res.ltc, cobertura: res.equityTotal > 0 ? res.equityTotal / res.costoPreFinan : 0, tir: res.tir, moic: res.moic };
     });
-  }, [sup, mix, thresholds]);
+  }, [tab, sup, mix, thresholds]);
   // 5 escenarios predefinidos
   const escenarios = useMemo(() => {
+    if (tab !== "escenarios") return null;
     const defs = [
       { nombre: "Agresivo", precioDelta: 0.20, costoDelta: -0.10, color: "text-emerald-700", bg: "bg-emerald-200" },
       { nombre: "Optimista", precioDelta: 0.10, costoDelta: -0.05, color: "text-emerald-600", bg: "bg-emerald-200" },
@@ -964,7 +971,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       const res = calcAll(newSup, newMix, thresholds);
       return { ...d, ...res };
     });
-  }, [sup, mix, thresholds]);
+  }, [tab, sup, mix, thresholds]);
   // Punto de equilibrio — Fórmulas exactas del Excel (TABLERO rows 48-50)
   const breakEven = useMemo(() => {
     // Excel: costosVariables = blandos + comision + marketing (% del ingreso)
