@@ -768,7 +768,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
 
     setValidationErrors([]);
     setTab("resultados");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
     trackEvent("analisis_generado", { proyecto: sup.proyecto });
   }, [validateFields, trackEvent, sup.proyecto]);
 
