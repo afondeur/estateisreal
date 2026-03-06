@@ -9,7 +9,11 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login, loginWithGoogle } = useAuth();
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotMsg, setForgotMsg] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const { login, loginWithGoogle, resetPassword } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
@@ -43,6 +47,20 @@ function LoginForm() {
     }
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) { setForgotMsg("Ingresa tu correo electrónico"); return; }
+    setForgotLoading(true);
+    setForgotMsg("");
+    const { error: resetError } = await resetPassword(forgotEmail);
+    setForgotLoading(false);
+    if (resetError) {
+      setForgotMsg(resetError.message || "Error al enviar el enlace");
+    } else {
+      setForgotMsg("Te enviamos un enlace para restablecer tu contraseña. Revisa tu correo.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -71,20 +89,40 @@ function LoginForm() {
             <div className="relative flex justify-center text-xs"><span className="bg-white px-4 text-slate-400">o con correo electrónico</span></div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">{error}</div>}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Correo electrónico</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="tu@correo.com" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="••••••••" />
-            </div>
-            <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-400 text-white font-bold py-3 rounded-xl transition">
-              {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
-            </button>
-          </form>
+          {showForgot ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-700">Restablecer contraseña</h3>
+              {forgotMsg && <div className={`text-sm rounded-lg px-4 py-2 ${forgotMsg.includes("enviamos") ? "bg-green-50 border border-green-200 text-green-700" : "bg-red-50 border border-red-200 text-red-700"}`} role="alert">{forgotMsg}</div>}
+              <div>
+                <label htmlFor="forgot-email" className="block text-sm font-medium text-slate-700 mb-1">Correo electrónico</label>
+                <input id="forgot-email" type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="tu@correo.com" />
+              </div>
+              <button type="submit" disabled={forgotLoading} className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-400 text-white font-bold py-3 rounded-xl transition">
+                {forgotLoading ? "Enviando..." : "Enviar enlace"}
+              </button>
+              <button type="button" onClick={() => { setShowForgot(false); setForgotMsg(""); }} className="w-full text-sm text-slate-500 hover:text-slate-700 transition">
+                Volver a iniciar sesión
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2" role="alert">{error}</div>}
+              <div>
+                <label htmlFor="login-email" className="block text-sm font-medium text-slate-700 mb-1">Correo electrónico</label>
+                <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="tu@correo.com" />
+              </div>
+              <div>
+                <label htmlFor="login-password" className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+                <input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="••••••••" />
+                <button type="button" onClick={() => { setShowForgot(true); setForgotEmail(email); }} className="text-xs text-blue-600 hover:text-blue-500 mt-1">
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
+              <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-400 text-white font-bold py-3 rounded-xl transition">
+                {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+              </button>
+            </form>
+          )}
 
           <p className="text-center text-sm text-slate-500 mt-6">
             ¿No tienes cuenta? <Link href={redirect ? `/registro?redirect=${encodeURIComponent(redirect)}` : "/registro"} className="text-blue-600 hover:text-blue-500 font-medium">Regístrate gratis</Link>

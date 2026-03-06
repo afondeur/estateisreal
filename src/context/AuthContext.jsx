@@ -56,13 +56,16 @@ export function AuthProvider({ children }) {
     if (!supabase) return { error: { message: "Servicio no disponible" } };
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) return { error };
-    // Update profile with name and company (wait for trigger to create the profile)
+    // H5: Update profile with retry + backoff (wait for trigger to create the profile)
     if (data.user) {
-      await new Promise(r => setTimeout(r, 500));
-      await supabase.from("profiles").update({
-        nombre,
-        empresa,
-      }).eq("id", data.user.id);
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        const { error: updateError } = await supabase.from("profiles").update({
+          nombre,
+          empresa,
+        }).eq("id", data.user.id);
+        if (!updateError) break;
+      }
       await fetchProfile(data.user.id);
     }
     return { data };
@@ -213,6 +216,15 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
+  // H14: Reset password
+  const resetPassword = useCallback(async (email) => {
+    if (!supabase) return { error: { message: "Servicio no disponible" } };
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/auth/callback",
+    });
+    return { error };
+  }, []);
+
   // Tier and admin status — read exclusively from the database
   const isAdmin = profile?.is_admin === true;
   const tier = isAdmin ? "pro" : (profile?.tier || "free");
@@ -226,6 +238,7 @@ export function AuthProvider({ children }) {
       signUp,
       loginWithGoogle,
       logout,
+      resetPassword,
       trackEvent,
       saveFeedback,
       refreshProfile,

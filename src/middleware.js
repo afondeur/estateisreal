@@ -25,6 +25,19 @@ export async function middleware(request) {
     }
   );
 
+  // H4: CSRF protection for mutating API requests (except webhook)
+  if (
+    request.method !== "GET" &&
+    request.nextUrl.pathname.startsWith("/api/") &&
+    !request.nextUrl.pathname.startsWith("/api/webhook")
+  ) {
+    const origin = request.headers.get("origin");
+    const host = request.headers.get("host");
+    if (origin && !origin.endsWith(host)) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+  }
+
   // Refresh the session so it doesn't expire
   const { data: { user } } = await supabase.auth.getUser();
 

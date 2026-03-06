@@ -98,22 +98,22 @@ function RegistroForm() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">{error}</div>}
+            {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2" role="alert">{error}</div>}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre completo *</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Juan Pérez" />
+              <label htmlFor="reg-name" className="block text-sm font-medium text-slate-700 mb-1">Nombre completo *</label>
+              <input id="reg-name" type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Juan Pérez" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Empresa <span className="text-slate-400">(opcional)</span></label>
-              <input type="text" value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Mi Empresa S.R.L." />
+              <label htmlFor="reg-empresa" className="block text-sm font-medium text-slate-700 mb-1">Empresa <span className="text-slate-400">(opcional)</span></label>
+              <input id="reg-empresa" type="text" value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Mi Empresa S.R.L." />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Correo electrónico *</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="tu@correo.com" />
+              <label htmlFor="reg-email" className="block text-sm font-medium text-slate-700 mb-1">Correo electrónico *</label>
+              <input id="reg-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="tu@correo.com" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña *</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Mínimo 6 caracteres" />
+              <label htmlFor="reg-password" className="block text-sm font-medium text-slate-700 mb-1">Contraseña *</label>
+              <input id="reg-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Mínimo 6 caracteres" />
             </div>
             <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-400 text-white font-bold py-3 rounded-xl transition">
               {loading ? "Creando cuenta..." : "Crear Cuenta Gratuita"}

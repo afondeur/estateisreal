@@ -1,9 +1,17 @@
 import { createSupabaseServerClient } from "../../../lib/supabase-server";
+import { rateLimit } from "../../../lib/rate-limit";
 
 const MONTHLY_LIMIT = 3;
 
-export async function GET() {
+export async function GET(request) {
   try {
+    // H3: Rate limit — 20 req/min
+    const ip = request.headers.get("x-forwarded-for") || "unknown";
+    const rl = rateLimit(ip, 20, 60_000);
+    if (!rl.allowed) {
+      return Response.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -36,8 +44,8 @@ export async function GET() {
 
     if (countError) {
       console.error("check-usage: Error counting events:", countError);
-      // Fail open — allow the analysis if we can't count
-      return Response.json({ count: 0, limit: MONTHLY_LIMIT, allowed: true });
+      // H1: Fail-closed — deny on error
+      return Response.json({ count: 0, limit: MONTHLY_LIMIT, allowed: false });
     }
 
     const usageCount = count || 0;
@@ -49,7 +57,7 @@ export async function GET() {
     });
   } catch (err) {
     console.error("check-usage error:", err);
-    // Fail open
-    return Response.json({ count: 0, limit: MONTHLY_LIMIT, allowed: true });
+    // H1: Fail-closed — deny on error
+    return Response.json({ count: 0, limit: MONTHLY_LIMIT, allowed: false });
   }
 }

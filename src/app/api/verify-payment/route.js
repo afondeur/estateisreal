@@ -1,12 +1,20 @@
 import Stripe from "stripe";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "../../../lib/supabase-server";
+import { rateLimit } from "../../../lib/rate-limit";
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
-export async function POST() {
+export async function POST(request) {
   try {
+    // H3: Rate limit — 10 req/min
+    const ip = request.headers.get("x-forwarded-for") || "unknown";
+    const rl = rateLimit(ip, 10, 60_000);
+    if (!rl.allowed) {
+      return Response.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     if (!stripe) {
       return Response.json({ error: "Servicio no disponible" }, { status: 503 });
     }

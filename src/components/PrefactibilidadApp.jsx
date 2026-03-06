@@ -142,6 +142,7 @@ function calcAll(sup, mix, thresholds) {
     densidad, m2PorUnidad, indiceEdificabilidad, costoM2Total,
     checks, cumple, decision, decisionColor,
     pResidente, pVisita, pDiscapacidad, pDisponibleViviendas, pPorUnidad, pExcedenteVenta, pRequeridos, pCumple,
+    financingWarning: denominator <= 0,
   };
 }
 
@@ -750,20 +751,20 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       return;
     }
 
-    // Check usage limit for free users
+    // C3: Server-side usage enforcement — block if not allowed
     try {
       const res = await fetch("/api/check-usage");
-      if (res.ok) {
-        const usage = await res.json();
-        if (!usage.allowed) {
-          setUsageCount(usage.count);
-          setShowUsageLimit(true);
-          return;
-        }
+      const usage = await res.json();
+      if (!usage.allowed) {
+        setUsageCount(usage.count);
+        setShowUsageLimit(true);
+        setValidationErrors([`Has alcanzado el límite de ${usage.limit} análisis este mes. Cambia a Pro para análisis ilimitados.`]);
+        return;
       }
-      // If API fails, fail open — allow the analysis
     } catch {
-      // Fail open
+      // Fail-closed: block on network error
+      setValidationErrors(["No se pudo verificar tu uso. Intenta de nuevo."]);
+      return;
     }
 
     setValidationErrors([]);
@@ -1411,6 +1412,13 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
               <div className="text-4xl font-black mb-1">{r.decision}</div>
               <div className="text-sm opacity-90">{r.cumple}/7 métricas cumplen umbral mínimo</div>
             </div>
+
+            {/* H18: Financing warning */}
+            {r.financingWarning && (
+              <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 text-amber-800 text-sm">
+                <strong>Advertencia:</strong> La estructura de financiamiento es matemáticamente imposible. El denominador del cálculo de préstamo es cero o negativo (tasa de interés &times; draw factor &times; plazo + comisión bancaria &ge; 100%). Revisa los supuestos de financiamiento.
+              </div>
+            )}
 
             {/* 7 Métricas */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
