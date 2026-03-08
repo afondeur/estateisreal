@@ -22,6 +22,12 @@
 .DS_Store
 *.pem
 
+# documents
+*.docx
+*.xlsx
+*.pdf
+*.sql
+
 # debug
 npm-debug.log*
 yarn-debug.log*
