@@ -125,8 +125,8 @@ function calcAll(sup, mix, thresholds) {
 
   // ─── PARQUEOS ───
   const pResidente = Math.ceil(unidades * sup.ratioResidente);
-  const pVisita = sup.divisorVisita > 0 ? Math.floor(unidades / sup.divisorVisita) : 0;
-  const pDiscapacidad = sup.divisorDiscapacidad > 0 && unidades >= sup.divisorDiscapacidad ? Math.floor(unidades / sup.divisorDiscapacidad) : 0;
+  const pVisita = sup.divisorVisita > 0 ? Math.ceil(unidades / sup.divisorVisita) : 0;
+  const pDiscapacidad = sup.divisorDiscapacidad > 0 ? Math.ceil(unidades / sup.divisorDiscapacidad) : 0;
   const pDisponibleViviendas = Math.max(0, sup.parqueosDisenados - pVisita - pDiscapacidad);
   const pPorUnidad = unidades > 0 ? pDisponibleViviendas / unidades : 0;
   const pExcedenteVenta = pPorUnidad > 2 ? Math.floor(pDisponibleViviendas - 2 * unidades) : 0;
