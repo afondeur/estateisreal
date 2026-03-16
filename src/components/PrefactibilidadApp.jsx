@@ -1545,14 +1545,14 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                 </div>
                 <div className="flex justify-between items-center border-b border-slate-200 pb-1">
                   <span className="text-slate-600">Visitantes <span className="text-slate-400 text-xs ml-1">1 cada {sup.divisorVisita} uds</span></span>
-                  <strong className="font-mono text-red-600">− {r.pVisita}</strong>
+                  <strong className="font-mono text-slate-800">− {r.pVisita}</strong>
                 </div>
                 <div className="flex justify-between items-center border-b border-slate-200 pb-1">
                   <span className="text-slate-600">Discapacidad {r.pDiscapacidad > 0
                     ? <span className="text-slate-400 text-xs ml-1">1 cada {sup.divisorDiscapacidad} uds</span>
                     : <span className="text-slate-400 text-xs ml-1">No se requiere</span>}
                   </span>
-                  <strong className="font-mono text-red-600">− {r.pDiscapacidad}</strong>
+                  <strong className="font-mono text-slate-800">− {r.pDiscapacidad}</strong>
                 </div>
                 <div className="flex justify-between items-center border-b border-slate-200 pb-1 pt-1">
                   <span className="text-slate-700 font-semibold">Disponibles para viviendas</span>
