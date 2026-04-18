@@ -5,7 +5,7 @@ import UsageLimitModal from "./UsageLimitModal";
 
 // ═══════════════════════════════════════════════════════════
 // HERRAMIENTA DE PREFACTIBILIDAD INMOBILIARIA v1.0
-// © Alejandro J. Fondeur M. — Febrero 2026
+// © ESTATEisREAL — Febrero 2026
 // Motor de cálculo basado en T_PREFACTIBILIDAD_PRO.xlsx v4.2
 // ═══════════════════════════════════════════════════════════
 
@@ -1968,7 +1968,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
 
       {/* Footer */}
       <div className="no-print bg-slate-800 text-slate-400 text-xs text-center py-3 mt-8">
-        ESTATEisREAL — Prefactibilidad Inmobiliaria v1.0 | Motor de cálculo basado en metodología PE/VC | © Alejandro J. Fondeur M. 2026
+        ESTATEisREAL — Prefactibilidad Inmobiliaria v1.0 | Motor de cálculo basado en metodología PE/VC | © 2026 ESTATEisREAL
       </div>
 
       {/* Modal de Feedback antes de imprimir */}
