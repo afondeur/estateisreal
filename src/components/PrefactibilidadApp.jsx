@@ -23,6 +23,15 @@ const DEFAULT_THRESHOLDS = {
   tirMin: 0.25, ltvMax: 0.45, ltcMax: 0.55
 };
 
+// Escenarios de mercado editables por el usuario (deltas sobre precio y costo)
+const DEFAULT_ESCENARIOS = [
+  { nombre: "Agresivo",    precioDelta:  0.20, costoDelta: -0.10, color: "text-emerald-700", bg: "bg-emerald-200" },
+  { nombre: "Optimista",   precioDelta:  0.10, costoDelta: -0.05, color: "text-emerald-600", bg: "bg-emerald-200" },
+  { nombre: "Base",        precioDelta:  0,    costoDelta:  0,    color: "text-blue-700",    bg: "bg-blue-50" },
+  { nombre: "Conservador", precioDelta: -0.05, costoDelta:  0.05, color: "text-amber-700",   bg: "bg-amber-200" },
+  { nombre: "Pesimista",   precioDelta: -0.15, costoDelta:  0.10, color: "text-red-700",     bg: "bg-red-200" },
+];
+
 const DEFAULT_SUPUESTOS = {
   proyecto: "", ubicacion: "", fecha: "",
   areaTerreno: 0, precioTerreno: 0,
@@ -544,6 +553,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
   const [sup, setSup] = useState(DEFAULT_SUPUESTOS);
   const [mix, setMix] = useState(DEFAULT_MIX);
   const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
+  const [escenariosDefs, setEscenariosDefs] = useState(DEFAULT_ESCENARIOS);
   const [tab, setTab] = useState("supuestos");
   const [pctVar, setPctVar] = useState(0.05);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -573,6 +583,16 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
   const updateSup = useCallback((key, val) => setSup(prev => ({ ...prev, [key]: NON_NEGATIVE_KEYS.has(key) ? Math.max(0, val) : val })), []);
   const updateMix = useCallback((idx, key, val) => setMix(prev => prev.map((u, i) => i === idx ? { ...u, [key]: val } : u)), []);
   const updateThresh = useCallback((key, val) => setThresholds(prev => ({ ...prev, [key]: val })), []);
+  // Editar deltas de escenarios (excepto Base, que siempre queda en 0/0 como referencia)
+  const updateEscenarioDelta = useCallback((idx, key, val) => {
+    setEscenariosDefs(prev => prev.map((e, i) => {
+      if (i !== idx) return e;
+      if (e.nombre === "Base") return e; // Base es inmutable
+      const clamped = Math.max(-0.95, Math.min(2, val)); // evitar valores absurdos (-95% a +200%)
+      return { ...e, [key]: clamped };
+    }));
+  }, []);
+  const resetEscenarios = useCallback(() => setEscenariosDefs(DEFAULT_ESCENARIOS), []);
 
   // Llenado rápido (solo admin)
   const llenadoRapido = useCallback(() => {
@@ -956,23 +976,16 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       return { capital: cap, equityTotal: res.equityTotal, preventas: res.preventas, prestamo: res.prestamo, ltv: res.ltv, ltc: res.ltc, cobertura: res.equityTotal > 0 ? res.equityTotal / res.costoPreFinan : 0, tir: res.tir, moic: res.moic };
     });
   }, [tab, sup, mix, thresholds]);
-  // 5 escenarios predefinidos
+  // 5 escenarios editables — los deltas vienen del state escenariosDefs
   const escenarios = useMemo(() => {
     if (tab !== "escenarios") return null;
-    const defs = [
-      { nombre: "Agresivo", precioDelta: 0.20, costoDelta: -0.10, color: "text-emerald-700", bg: "bg-emerald-200" },
-      { nombre: "Optimista", precioDelta: 0.10, costoDelta: -0.05, color: "text-emerald-600", bg: "bg-emerald-200" },
-      { nombre: "Base", precioDelta: 0, costoDelta: 0, color: "text-blue-700", bg: "bg-blue-50" },
-      { nombre: "Conservador", precioDelta: -0.05, costoDelta: 0.05, color: "text-amber-700", bg: "bg-amber-200" },
-      { nombre: "Pesimista", precioDelta: -0.15, costoDelta: 0.10, color: "text-red-700", bg: "bg-red-200" },
-    ];
-    return defs.map(d => {
+    return escenariosDefs.map(d => {
       const newMix = mix.map(u => ({ ...u, precioUd: u.precioUd * (1 + d.precioDelta) }));
       const newSup = { ...sup, costoM2: sup.costoM2 * (1 + d.costoDelta) };
       const res = calcAll(newSup, newMix, thresholds);
       return { ...d, ...res };
     });
-  }, [tab, sup, mix, thresholds]);
+  }, [tab, sup, mix, thresholds, escenariosDefs]);
   // Punto de equilibrio — Fórmulas exactas del Excel (TABLERO rows 48-50)
   const breakEven = useMemo(() => {
     // Excel: costosVariables = blandos + comision + marketing (% del ingreso)
@@ -1820,8 +1833,19 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
           <div className="space-y-4 pb-8">
             {/* 5 Escenarios */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">5 Escenarios de Mercado</h3>
-              <p className="text-xs text-slate-500 mb-3">¿Cómo se comporta el proyecto si el mercado mejora o empeora? Cada escenario ajusta precio y costo de construcción.</p>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">5 Escenarios de Mercado</h3>
+                  <p className="text-xs text-slate-500 mt-1">¿Cómo se comporta el proyecto si el mercado mejora o empeora? Cada escenario ajusta precio y costo de construcción. <span className="text-blue-600 font-medium">Edita los porcentajes para ajustar a tu mercado.</span></p>
+                </div>
+                <button
+                  onClick={resetEscenarios}
+                  className="no-print shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 hover:border-slate-400 transition"
+                  title="Restaurar los deltas predeterminados (+20/-10, +10/-5, 0/0, -5/+5, -15/+10)"
+                >
+                  ↺ Restaurar defaults
+                </button>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
@@ -1844,9 +1868,46 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                         <tr key={i} className={`border-t border-slate-100 ${isBase ? "bg-blue-50" : ""}`}>
                           <td className={`p-2 font-bold ${isBase ? "text-blue-700" : "text-slate-700"}`}>
                             {e.nombre}
-                            <div className="font-normal text-slate-500 text-xs">
-                              Precio {e.precioDelta >= 0 ? "+" : ""}{(e.precioDelta*100).toFixed(0)}%, Costo {e.costoDelta >= 0 ? "+" : ""}{(e.costoDelta*100).toFixed(0)}%
-                            </div>
+                            {isBase ? (
+                              <div className="font-normal text-slate-500 text-xs">
+                                Precio +0%, Costo +0% <span className="text-slate-400">(referencia)</span>
+                              </div>
+                            ) : (
+                              <>
+                                {/* Vista editable — solo en pantalla */}
+                                <div className="no-print font-normal text-slate-500 text-xs mt-0.5 flex items-center gap-1 flex-wrap">
+                                  <span>Precio</span>
+                                  <input
+                                    type="number"
+                                    step="1"
+                                    value={Number.isFinite(e.precioDelta) ? (e.precioDelta * 100).toFixed(0) : 0}
+                                    onChange={(ev) => {
+                                      const v = parseFloat(ev.target.value);
+                                      updateEscenarioDelta(i, "precioDelta", isNaN(v) ? 0 : v / 100);
+                                    }}
+                                    className="w-14 px-1 py-0.5 border border-slate-300 rounded text-center font-mono text-slate-700 bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    aria-label={`Delta de precio para escenario ${e.nombre}`}
+                                  />
+                                  <span>%, Costo</span>
+                                  <input
+                                    type="number"
+                                    step="1"
+                                    value={Number.isFinite(e.costoDelta) ? (e.costoDelta * 100).toFixed(0) : 0}
+                                    onChange={(ev) => {
+                                      const v = parseFloat(ev.target.value);
+                                      updateEscenarioDelta(i, "costoDelta", isNaN(v) ? 0 : v / 100);
+                                    }}
+                                    className="w-14 px-1 py-0.5 border border-slate-300 rounded text-center font-mono text-slate-700 bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    aria-label={`Delta de costo para escenario ${e.nombre}`}
+                                  />
+                                  <span>%</span>
+                                </div>
+                                {/* Vista estática — solo al imprimir */}
+                                <div className="print-only font-normal text-slate-500 text-xs">
+                                  Precio {e.precioDelta >= 0 ? "+" : ""}{(e.precioDelta*100).toFixed(0)}%, Costo {e.costoDelta >= 0 ? "+" : ""}{(e.costoDelta*100).toFixed(0)}%
+                                </div>
+                              </>
+                            )}
                           </td>
                           <td className="p-2 text-center font-mono text-slate-700">{fmtUSD(e.ingresoTotal)}</td>
                           <td className="p-2 text-center font-mono text-slate-700">{fmtUSD(e.costoPreFinan)}</td>

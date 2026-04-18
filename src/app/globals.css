@@ -59,6 +59,10 @@ input, select, textarea {
 }
 
 /* ═══ PRINT STYLES ═══ */
+/* Elementos solo visibles al imprimir (ocultos en pantalla) */
+.print-only {
+  display: none;
+}
 @media print {
   * {
     -webkit-print-color-adjust: exact !important;
@@ -72,6 +76,9 @@ input, select, textarea {
   }
   .no-print {
     display: none !important;
+  }
+  .print-only {
+    display: block !important;
   }
   .min-h-screen {
     background: white !important;
