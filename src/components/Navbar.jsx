@@ -2,10 +2,12 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
+import PricingSurveyModal from "./PricingSurveyModal";
 
 export default function Navbar() {
   const { user, profile, tier, isAdmin, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [surveyOpen, setSurveyOpen] = useState(false);
   const menuRef = useRef(null);
 
   // Close menu on click outside
@@ -32,8 +34,17 @@ export default function Navbar() {
         {/* Desktop menu */}
         <div className="hidden md:flex items-center gap-4">
           <Link href="/pricing" className="text-sm text-slate-300 hover:text-white transition">Planes</Link>
+          <button
+            onClick={() => setSurveyOpen(true)}
+            className="text-sm text-slate-300 hover:text-white transition"
+          >
+            Opinión
+          </button>
           {user ? (
             <>
+              {isAdmin && (
+                <Link href="/admin" className="text-sm text-amber-400 hover:text-amber-300 transition">Admin</Link>
+              )}
               <Link href="/cuenta" className="text-sm text-slate-300 hover:text-white transition">Mi Cuenta</Link>
               <div className="flex items-center gap-2">
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${
@@ -75,8 +86,17 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden mt-3 pb-3 border-t border-slate-700 pt-3 space-y-3">
           <Link href="/pricing" className="block text-sm text-slate-300 hover:text-white transition" onClick={() => setMenuOpen(false)}>Planes</Link>
+          <button
+            onClick={() => { setSurveyOpen(true); setMenuOpen(false); }}
+            className="block text-sm text-slate-300 hover:text-white transition"
+          >
+            Opinión
+          </button>
           {user ? (
             <>
+              {isAdmin && (
+                <Link href="/admin" className="block text-sm text-amber-400 hover:text-amber-300 transition" onClick={() => setMenuOpen(false)}>Admin</Link>
+              )}
               <Link href="/cuenta" className="block text-sm text-slate-300 hover:text-white transition" onClick={() => setMenuOpen(false)}>Mi Cuenta</Link>
               <div className="flex items-center gap-2 pt-1">
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${
@@ -98,6 +118,8 @@ export default function Navbar() {
           )}
         </div>
       )}
+
+      <PricingSurveyModal open={surveyOpen} onClose={() => setSurveyOpen(false)} />
     </nav>
   );
 }

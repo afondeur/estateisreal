@@ -22,12 +22,19 @@ export async function GET(request) {
     // Fetch profile to check tier/admin
     const { data: profile } = await supabase
       .from("profiles")
-      .select("tier, is_admin")
+      .select("tier, is_admin, pro_until")
       .eq("id", user.id)
       .single();
 
-    // Pro and admin users always allowed
-    if (profile?.is_admin || profile?.tier === "pro") {
+    // Admin siempre permitido
+    if (profile?.is_admin) {
+      return Response.json({ count: 0, limit: MONTHLY_LIMIT, allowed: true });
+    }
+
+    // Pro vigente: tier='pro' Y (sin pro_until O pro_until aún en el futuro)
+    const proNotExpired = !profile?.pro_until ||
+      new Date(profile.pro_until).getTime() > Date.now();
+    if (profile?.tier === "pro" && proNotExpired) {
       return Response.json({ count: 0, limit: MONTHLY_LIMIT, allowed: true });
     }
 

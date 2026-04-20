@@ -225,9 +225,14 @@ export function AuthProvider({ children }) {
     return { error };
   }, []);
 
-  // Tier and admin status — read exclusively from the database
+  // Tier and admin status — read exclusively from the database.
+  // Si profile.pro_until existe y ya pasó, el tier efectivo vuelve a "free".
   const isAdmin = profile?.is_admin === true;
-  const tier = isAdmin ? "pro" : (profile?.tier || "free");
+  const rawTier = profile?.tier || "free";
+  const proExpired = profile?.pro_until && new Date(profile.pro_until).getTime() < Date.now();
+  const tier = isAdmin ? "pro" : (proExpired ? "free" : rawTier);
+  const proUntil = profile?.pro_until || null;
+  const proSource = profile?.pro_source || null;
 
   return (
     <AuthContext.Provider value={{
@@ -249,6 +254,8 @@ export function AuthProvider({ children }) {
       generateShareToken,
       tier,
       isAdmin,
+      proUntil,
+      proSource,
     }}>
       {children}
     </AuthContext.Provider>

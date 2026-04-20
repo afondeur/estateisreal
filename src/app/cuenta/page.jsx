@@ -6,7 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/Navbar";
 
 function CuentaContent() {
-  const { user, profile, tier, isAdmin, logout, refreshProfile } = useAuth();
+  const { user, profile, tier, isAdmin, logout, refreshProfile, proUntil, proSource } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showSuccess, setShowSuccess] = useState(false);
@@ -57,6 +57,11 @@ function CuentaContent() {
   }
 
   const isPremium = tier === "pro" || tier === "enterprise";
+  const proUntilDate = proUntil ? new Date(proUntil) : null;
+  const daysRemaining = proUntilDate
+    ? Math.max(0, Math.ceil((proUntilDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
+  const isPromoPro = !isAdmin && isPremium && proSource?.startsWith("promo:");
 
   return (
     <>
@@ -124,6 +129,18 @@ function CuentaContent() {
                 {isAdmin ? "ADMIN" : isPremium ? "PRO" : "GRATIS"}
               </span>
             </div>
+
+            {isPromoPro && proUntilDate && (
+              <div className="mt-4 pt-4 border-t border-blue-800">
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Acceso promocional</p>
+                <p className="text-sm text-blue-200">
+                  <strong>{daysRemaining}</strong> {daysRemaining === 1 ? "día restante" : "días restantes"}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Expira: {proUntilDate.toLocaleString("es-DO", { year: "numeric", month: "long", day: "numeric" })}
+                </p>
+              </div>
+            )}
           </div>
 
           {!isPremium && (
