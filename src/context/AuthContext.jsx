@@ -233,6 +233,8 @@ export function AuthProvider({ children }) {
   const tier = isAdmin ? "pro" : (proExpired ? "free" : rawTier);
   const proUntil = profile?.pro_until || null;
   const proSource = profile?.pro_source || null;
+  const surveyCompleted = !!profile?.survey_completed_at;
+  const isPromoPro = !isAdmin && tier === "pro" && proSource?.startsWith("promo:");
 
   return (
     <AuthContext.Provider value={{
@@ -256,6 +258,8 @@ export function AuthProvider({ children }) {
       isAdmin,
       proUntil,
       proSource,
+      surveyCompleted,
+      isPromoPro,
     }}>
       {children}
     </AuthContext.Provider>

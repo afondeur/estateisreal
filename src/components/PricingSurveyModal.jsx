@@ -17,7 +17,7 @@ const FRECUENCIAS = [
   { value: "por_proyecto", label: "Pago por proyecto" },
 ];
 
-export default function PricingSurveyModal({ open, onClose }) {
+export default function PricingSurveyModal({ open, onClose, required = false, onCompleted }) {
   const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
@@ -53,6 +53,15 @@ export default function PricingSurveyModal({ open, onClose }) {
         nps: nps,
       });
       if (insertError) throw insertError;
+
+      // Marcar en DB como completada (server-side) — para que no reaparezca el gate
+      try {
+        await fetch("/api/mark-survey-completed", { method: "POST" });
+        onCompleted?.();
+      } catch (e) {
+        console.log("mark-survey-completed fetch error:", e);
+      }
+
       setSent(true);
       setTimeout(() => {
         onClose?.();
@@ -65,8 +74,12 @@ export default function PricingSurveyModal({ open, onClose }) {
     }
   };
 
+  const handleBackdropClick = () => {
+    if (!required) onClose?.();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={handleBackdropClick}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         {sent ? (
           <div className="text-center py-8">
@@ -76,10 +89,17 @@ export default function PricingSurveyModal({ open, onClose }) {
           </div>
         ) : (
           <>
+            {required && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-xs text-blue-900">
+                <strong>Ya has usado la herramienta varias veces.</strong> Como tu acceso Pro es parte de una prueba, agradecemos mucho que respondas esta encuesta corta para saber cuánto valoras la herramienta.
+              </div>
+            )}
             <div className="mb-4">
-              <h2 className="text-lg font-bold text-slate-800">Encuesta rápida de precio</h2>
+              <h2 className="text-lg font-bold text-slate-800">Encuesta rápida de valor</h2>
               <p className="text-sm text-slate-500 mt-1">
-                Ayúdanos a entender cuánto valoras la herramienta. Son 2 minutos.
+                {required
+                  ? "2 minutos y listo. No volverá a aparecer una vez completada."
+                  : "Ayúdanos a entender cuánto valoras la herramienta. Son 2 minutos."}
               </p>
             </div>
 
@@ -213,21 +233,31 @@ export default function PricingSurveyModal({ open, onClose }) {
                 <p className="text-sm text-red-600">{error}</p>
               )}
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg text-sm font-medium text-slate-700 transition"
-                >
-                  Cerrar
-                </button>
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={submitting || (!rango && !precioLibre && nps === null)}
-                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition"
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition"
                 >
-                  {submitting ? "Enviando..." : "Enviar"}
+                  {submitting ? "Enviando..." : "Enviar respuestas"}
                 </button>
+                {required ? (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full mt-2 py-1 text-xs text-slate-400 hover:text-slate-600 transition underline underline-offset-2"
+                  >
+                    Saltar por ahora
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full mt-2 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm text-slate-600 transition"
+                  >
+                    Cerrar
+                  </button>
+                )}
               </div>
             </form>
           </>

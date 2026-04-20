@@ -2,6 +2,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import UsageLimitModal from "./UsageLimitModal";
+import PricingSurveyModal from "./PricingSurveyModal";
+import { supabase } from "../lib/supabase";
 
 // ═══════════════════════════════════════════════════════════
 // HERRAMIENTA DE PREFACTIBILIDAD INMOBILIARIA v1.0
@@ -549,7 +551,7 @@ function PrintDisclaimer() {
 // ═══════════════════════════════════════════════
 
 export default function PrefactibilidadApp({ initialShowProjects = false }) {
-  const { trackEvent, saveFeedback: saveFeedbackToDb, tier, isAdmin, user, saveProject, listProjects, loadProject, deleteProject, generateShareToken } = useAuth();
+  const { trackEvent, saveFeedback: saveFeedbackToDb, tier, isAdmin, user, saveProject, listProjects, loadProject, deleteProject, generateShareToken, isPromoPro, surveyCompleted, refreshProfile } = useAuth();
   const [sup, setSup] = useState(DEFAULT_SUPUESTOS);
   const [mix, setMix] = useState(DEFAULT_MIX);
   const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
@@ -578,6 +580,24 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+
+  // ─── Gate de encuesta para usuarios Pro temporal (promo) ───
+  // Se muestra después del 3er análisis generado o antes de la 2da impresión.
+  // Tiene botón "Saltar por ahora" para respetar autonomía del usuario, pero
+  // reaparece en cada uso hasta que se complete. Una vez completada, nunca más.
+  const [showSurveyGate, setShowSurveyGate] = useState(false);
+
+  const shouldShowGate = useCallback(async (trigger) => {
+    if (!user || !isPromoPro || surveyCompleted || !supabase) return false;
+    const eventType = trigger === "print" ? "impresion_realizada" : "analisis_generado";
+    const threshold = trigger === "print" ? 1 : 3;  // print: antes de la 2da (>=1 previa); analisis: al 3er (>=3)
+    const { count } = await supabase
+      .from("analytics_events")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("event_type", eventType);
+    return (count || 0) >= threshold;
+  }, [user, isPromoPro, surveyCompleted]);
 
   const NON_NEGATIVE_KEYS = new Set(["areaTerreno","precioTerreno","costoM2","equityCapital","mesesPredev","mesesConstruccion","mesesPostVenta","tasaInteres","drawFactor","comisionBanco","preventaPct","cobroPct","softCosts","comisionVenta","marketing","contingencias"]);
   const updateSup = useCallback((key, val) => setSup(prev => ({ ...prev, [key]: NON_NEGATIVE_KEYS.has(key) ? Math.max(0, val) : val })), []);
@@ -790,17 +810,27 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
     setValidationErrors([]);
     setTab("resultados");
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
-    trackEvent("analisis_generado", { proyecto: sup.proyecto });
-  }, [validateFields, trackEvent, sup.proyecto]);
+    await trackEvent("analisis_generado", { proyecto: sup.proyecto });
+    // Gate: si es Pro promo y ya acumula ≥3 análisis sin completar encuesta
+    if (await shouldShowGate("analisis")) {
+      setTimeout(() => setShowSurveyGate(true), 800);
+    }
+  }, [validateFields, trackEvent, sup.proyecto, shouldShowGate]);
 
   // Imprimir con feedback
-  const handlePrint = useCallback(() => {
+  const handlePrint = useCallback(async () => {
+    // Gate pre-impresión: si Pro promo con ≥1 impresión previa y sin encuesta completada
+    if (await shouldShowGate("print")) {
+      setShowSurveyGate(true);
+      return;
+    }
     if (feedbackSent) {
+      await trackEvent("impresion_realizada", { proyecto: sup.proyecto });
       window.print();
     } else {
       setShowFeedback(true);
     }
-  }, [feedbackSent]);
+  }, [feedbackSent, trackEvent, sup.proyecto, shouldShowGate]);
 
   const submitFeedbackAndPrint = useCallback(async () => {
     // Guardar feedback en Supabase
@@ -808,6 +838,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
     try {
       await saveFeedbackToDb(sup.proyecto || "Sin nombre", feedback1, respuesta2, feedback3);
       await trackEvent("feedback_submitted", { proyecto: sup.proyecto, feedback1, feedback2: respuesta2, feedback3 });
+      await trackEvent("impresion_realizada", { proyecto: sup.proyecto });
     } catch (e) {
       console.log("Error guardando feedback:", e);
     }
@@ -816,10 +847,11 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
     setTimeout(() => window.print(), 300);
   }, [feedback1, feedback2, feedback3, feedbackOtro, sup.proyecto, saveFeedbackToDb, trackEvent]);
 
-  const skipFeedbackAndPrint = useCallback(() => {
+  const skipFeedbackAndPrint = useCallback(async () => {
     setFeedbackSent(true);
     setShowFeedback(false);
-    trackEvent("feedback_skipped", { proyecto: sup.proyecto });
+    await trackEvent("feedback_skipped", { proyecto: sup.proyecto });
+    await trackEvent("impresion_realizada", { proyecto: sup.proyecto });
     setTimeout(() => window.print(), 300);
   }, [trackEvent, sup.proyecto]);
 
@@ -1019,6 +1051,12 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
           onClose={() => setShowUsageLimit(false)}
         />
       )}
+      <PricingSurveyModal
+        open={showSurveyGate}
+        onClose={() => setShowSurveyGate(false)}
+        required={true}
+        onCompleted={() => { refreshProfile?.(); }}
+      />
       {/* Marca de agua para usuarios free (solo visible en print) */}
       {tier !== "pro" && (
         <div className="print-watermark" aria-hidden="true">
