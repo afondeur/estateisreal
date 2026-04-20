@@ -28,6 +28,7 @@ export default function PricingSurveyModal({ open, onClose }) {
   const [valorPrincipal, setValorPrincipal] = useState("");
   const [mejoraria, setMejoraria] = useState("");
   const [comentario, setComentario] = useState("");
+  const [nps, setNps] = useState(null);
 
   if (!open) return null;
 
@@ -49,6 +50,7 @@ export default function PricingSurveyModal({ open, onClose }) {
         valor_principal: valorPrincipal || null,
         mejoraria: mejoraria || null,
         comentario: comentario || null,
+        nps: nps,
       });
       if (insertError) throw insertError;
       setSent(true);
@@ -82,6 +84,34 @@ export default function PricingSurveyModal({ open, onClose }) {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  ¿Qué tan probable es que recomiendes ESTATEisREAL a un colega?
+                </label>
+                <div className="flex flex-wrap gap-1 mb-1">
+                  {Array.from({ length: 11 }, (_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setNps(i)}
+                      className={`w-9 h-9 rounded-lg text-sm font-semibold border transition ${
+                        nps === i
+                          ? (i >= 9 ? "bg-emerald-600 text-white border-emerald-600"
+                            : i >= 7 ? "bg-amber-500 text-white border-amber-500"
+                            : "bg-red-500 text-white border-red-500")
+                          : "bg-white text-slate-700 border-slate-300 hover:border-slate-400"
+                      }`}
+                    >
+                      {i}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex justify-between text-xs text-slate-500">
+                  <span>0 — Para nada probable</span>
+                  <span>10 — Muy probable</span>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
                   ¿Cuánto pagarías al mes por acceso Pro?
@@ -193,7 +223,7 @@ export default function PricingSurveyModal({ open, onClose }) {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || (!rango && !precioLibre)}
+                  disabled={submitting || (!rango && !precioLibre && nps === null)}
                   className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition"
                 >
                   {submitting ? "Enviando..." : "Enviar"}
