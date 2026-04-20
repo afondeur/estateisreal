@@ -44,7 +44,7 @@ function CanjeContent() {
       const data = await res.json();
       if (!res.ok || !data.ok) {
         setStatus("error");
-        setMessage(data.error || "No se pudo canjear el código");
+        setMessage(data.error || "No se pudo activar el código");
         return;
       }
       setStatus("success");
@@ -90,7 +90,7 @@ function CanjeContent() {
       <div className="min-h-screen bg-slate-800 py-8 px-4">
         <div className="max-w-lg mx-auto">
           <div className="bg-slate-700 rounded-2xl shadow-lg border border-slate-600 p-6 sm:p-8">
-            <h1 className="text-2xl font-bold text-slate-100 mb-2">Canjear código</h1>
+            <h1 className="text-2xl font-bold text-slate-100 mb-2">Activar código</h1>
             <p className="text-sm text-slate-400 mb-6">
               Si tienes un código de activación, ingrésalo aquí para obtener acceso Pro temporal.
             </p>
@@ -98,7 +98,7 @@ function CanjeContent() {
             {!user && !loading && (
               <div className="bg-amber-900/30 border border-amber-700 rounded-xl p-3 mb-5">
                 <p className="text-amber-200 text-xs">
-                  Ingresa tu código y te pediremos iniciar sesión o registrarte al canjear.
+                  Ingresa tu código y te pediremos iniciar sesión o registrarte al activarlo.
                 </p>
               </div>
             )}
@@ -107,7 +107,7 @@ function CanjeContent() {
               <div className="bg-emerald-900/30 border border-emerald-600 rounded-xl p-5 text-center">
                 <div className="text-4xl mb-2">✓</div>
                 <p className="text-emerald-300 font-bold text-lg mb-2">
-                  ¡Código canjeado!
+                  ¡Código activado!
                 </p>
                 <p className="text-slate-200 text-sm mb-4">
                   Tu cuenta es ahora <strong className="text-blue-300">Pro</strong> por {durationDays} días.
@@ -142,7 +142,8 @@ function CanjeContent() {
                     onChange={(e) => setCode(e.target.value.toUpperCase())}
                     placeholder="TUR2026"
                     disabled={status === "loading"}
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50 uppercase tracking-wider"
+                    style={{ color: "#0f172a", backgroundColor: "#ffffff" }}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg placeholder-slate-400 focus:border-blue-500 focus:outline-none disabled:opacity-50 uppercase tracking-wider text-lg font-mono font-bold"
                     maxLength={50}
                     autoComplete="off"
                     autoFocus
@@ -161,15 +162,15 @@ function CanjeContent() {
                   className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:cursor-not-allowed rounded-lg text-white font-medium transition"
                 >
                   {status === "loading"
-                    ? "Canjeando..."
-                    : !user ? "Iniciar sesión y canjear" : "Canjear código"}
+                    ? "Activando..."
+                    : !user ? "Iniciar sesión y activar" : "Activar código"}
                 </button>
               </form>
             )}
 
             <div className="mt-6 pt-5 border-t border-slate-600 space-y-3">
               <p className="text-xs text-slate-500">
-                Los códigos promocionales tienen fechas de validez y cupos limitados. Un mismo email solo puede canjear un código una vez.
+                Los códigos promocionales tienen fechas de validez y cupos limitados. Un mismo email solo puede activar un código una vez.
               </p>
               <p className="text-xs text-slate-500 leading-relaxed">
                 <strong className="text-slate-400">Uso de datos agregados:</strong> al generar análisis, los datos del proyecto (ciudad, sistema constructivo, costos, precios, tipo) se guardan de forma <strong>anónima</strong> para producir benchmarks de mercado. <strong>No compartimos</strong> nombre del proyecto, email ni ningún dato identificable. Los datos solo se usan en agregado.
