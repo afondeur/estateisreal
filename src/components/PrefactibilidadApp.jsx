@@ -36,6 +36,7 @@ const DEFAULT_ESCENARIOS = [
 
 const DEFAULT_SUPUESTOS = {
   proyecto: "", ubicacion: "", fecha: "",
+  ciudad: "", sector: "", sistemaConstructivo: "", tipoProyecto: "",
   areaTerreno: 0, precioTerreno: 0,
   costoM2: 0, softCosts: 0, comisionVenta: 0, marketing: 0, contingencias: 0,
   tasaInteres: 0, drawFactor: 0, comisionBanco: 0,
@@ -44,6 +45,29 @@ const DEFAULT_SUPUESTOS = {
   equityCapital: 0,
   parqueosDisenados: 0, ratioResidente: 2, divisorVisita: 10, divisorDiscapacidad: 50,
 };
+
+const CIUDADES = [
+  "Santo Domingo", "Santiago", "Puerto Plata", "La Romana",
+  "Punta Cana / Bávaro", "Higüey", "San Francisco de Macorís",
+  "San Pedro de Macorís", "La Vega", "Moca", "Samaná", "Barahona", "Otro",
+];
+
+const SISTEMAS_CONSTRUCTIVOS = [
+  "Bloque tradicional",
+  "Hormigón armado",
+  "Prefabricado",
+  "Acero estructural",
+  "Mixto",
+];
+
+const TIPOS_PROYECTO = [
+  "Residencial económico",
+  "Residencial medio",
+  "Residencial alto",
+  "Turístico",
+  "Comercial",
+  "Mixto (residencial + comercial)",
+];
 
 const fmt = (n, dec = 0) => n == null || isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
 const fmtPct = (n, dec = 1) => n == null || isNaN(n) ? "—" : (n * 100).toFixed(dec) + "%";
@@ -213,7 +237,7 @@ function evalFormula(input) {
 // UI COMPONENTS
 // ═══════════════════════════════════════════════
 
-function InputField({ label, value, onChange, type = "number", step, suffix, prefix, min, max, small, required }) {
+function InputField({ label, value, onChange, type = "number", step, suffix, prefix, min, max, small, required, placeholder }) {
   const isNum = type === "number";
   const [editing, setEditing] = useState(false);
   const [rawText, setRawText] = useState("");
@@ -265,11 +289,33 @@ function InputField({ label, value, onChange, type = "number", step, suffix, pre
           onFocus={handleFocus}
           onBlur={handleBlur}
           onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
-          placeholder={isNum ? "0 ó =fórmula" : "0"}
+          placeholder={placeholder || (isNum ? "0 ó =fórmula" : "0")}
           className={`w-full px-2 py-1.5 rounded text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isFormula ? "bg-green-50 border-2 border-green-400" : isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
         />
         {suffix && <span className="text-sm text-slate-400 whitespace-nowrap">{suffix}</span>}
       </div>
+    </div>
+  );
+}
+
+// Dropdown categórico. Reutiliza el look de InputField para consistencia visual.
+function SelectField({ label, value, onChange, options, required, placeholder = "Seleccionar..." }) {
+  const isEmpty = required && (!value || value === "");
+  return (
+    <div className="flex flex-col gap-1">
+      <label className={`text-xs font-medium uppercase tracking-wide ${isEmpty ? "text-red-500" : "text-slate-500"}`}>
+        {label}{required ? " *" : ""}
+      </label>
+      <select
+        value={value || ""}
+        onChange={e => onChange(e.target.value)}
+        className={`w-full px-2 py-1.5 rounded text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
+      >
+        <option value="">{placeholder}</option>
+        {options.map(opt => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -756,7 +802,9 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
     const errors = [];
     const requiredSup = [
       { key: "proyecto", label: "Nombre del proyecto" },
-      { key: "ubicacion", label: "Ubicación" },
+      { key: "ciudad", label: "Ciudad" },
+      { key: "sistemaConstructivo", label: "Sistema constructivo" },
+      { key: "tipoProyecto", label: "Tipo de proyecto" },
       { key: "fecha", label: "Fecha" },
       { key: "areaTerreno", label: "Área del terreno" },
       { key: "precioTerreno", label: "Precio del terreno" },
@@ -811,11 +859,49 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
     setTab("resultados");
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
     await trackEvent("analisis_generado", { proyecto: sup.proyecto });
+
+    // Snapshot anónimo para inteligencia de mercado (no bloquea el flujo)
+    if (supabase) {
+      try {
+        const res = calcAll(sup, mix, thresholds);
+        await supabase.from("market_intelligence").insert({
+          ciudad: sup.ciudad || null,
+          sector: sup.ubicacion || null,
+          sistema_constructivo: sup.sistemaConstructivo || null,
+          tipo_proyecto: sup.tipoProyecto || null,
+          area_terreno: sup.areaTerreno || null,
+          precio_terreno: sup.precioTerreno || null,
+          precio_terreno_m2: sup.areaTerreno > 0 ? sup.precioTerreno / sup.areaTerreno : null,
+          costo_construccion_m2: sup.costoM2 || null,
+          area_construida: res.m2Vendible || null,
+          precio_venta_m2_promedio: res.precioPromM2 || null,
+          ingresos_totales: res.ingresoTotal || null,
+          unidades_total: res.unidades || null,
+          meses_predev: sup.mesesPredev || null,
+          meses_construccion: sup.mesesConstruccion || null,
+          meses_postventa: sup.mesesPostVenta || null,
+          tasa_interes: sup.tasaInteres || null,
+          draw_factor: sup.drawFactor || null,
+          preventa_pct: sup.preventaPct || null,
+          cobro_pct: sup.cobroPct || null,
+          soft_costs_pct: sup.softCosts || null,
+          comision_venta_pct: sup.comisionVenta || null,
+          marketing_pct: sup.marketing || null,
+          contingencias_pct: sup.contingencias || null,
+          margen_pct: res.margen ?? null,
+          roi_pct: res.roi ?? null,
+          tir_pct: res.tir ?? null,
+        });
+      } catch (e) {
+        console.log("market_intelligence snapshot error:", e);
+      }
+    }
+
     // Gate: si es Pro promo y ya acumula ≥3 análisis sin completar encuesta
     if (await shouldShowGate("analisis")) {
       setTimeout(() => setShowSurveyGate(true), 800);
     }
-  }, [validateFields, trackEvent, sup.proyecto, shouldShowGate]);
+  }, [validateFields, trackEvent, sup, mix, thresholds, shouldShowGate]);
 
   // Imprimir con feedback
   const handlePrint = useCallback(async () => {
@@ -1277,10 +1363,33 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
             {/* Proyecto */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Proyecto</h3>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <InputField label="Nombre" value={sup.proyecto} onChange={v => updateSup("proyecto", v)} type="text" required />
-                <InputField label="Ubicación" value={sup.ubicacion} onChange={v => updateSup("ubicacion", v)} type="text" required />
                 <InputField label="Fecha" value={sup.fecha} onChange={v => updateSup("fecha", v)} type="date" required />
+                <SelectField
+                  label="Ciudad"
+                  value={sup.ciudad}
+                  onChange={v => updateSup("ciudad", v)}
+                  options={CIUDADES}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                <InputField label="Sector / Urbanización" value={sup.ubicacion} onChange={v => updateSup("ubicacion", v)} type="text" placeholder="Ej: Piantini, Bella Vista" />
+                <SelectField
+                  label="Sistema constructivo"
+                  value={sup.sistemaConstructivo}
+                  onChange={v => updateSup("sistemaConstructivo", v)}
+                  options={SISTEMAS_CONSTRUCTIVOS}
+                  required
+                />
+                <SelectField
+                  label="Tipo de proyecto"
+                  value={sup.tipoProyecto}
+                  onChange={v => updateSup("tipoProyecto", v)}
+                  options={TIPOS_PROYECTO}
+                  required
+                />
               </div>
             </div>
 

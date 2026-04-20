@@ -117,6 +117,7 @@ export default function AdminPage() {
   const [profiles, setProfiles] = useState([]);
   const [analytics, setAnalytics] = useState([]);
   const [proyectos, setProyectos] = useState([]);
+  const [marketData, setMarketData] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -129,7 +130,7 @@ export default function AdminPage() {
       setError("");
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       try {
-        const [promoRes, redRes, fbRes, surveyRes, profilesRes, analyticsRes, proyectosRes] = await Promise.all([
+        const [promoRes, redRes, fbRes, surveyRes, profilesRes, analyticsRes, proyectosRes, marketRes] = await Promise.all([
           supabase.from("promo_codes").select("*").order("created_at", { ascending: false }),
           supabase.from("promo_redemptions").select("*").order("redeemed_at", { ascending: false }),
           supabase.from("feedback").select("*").order("created_at", { ascending: false }).limit(500),
@@ -137,6 +138,7 @@ export default function AdminPage() {
           supabase.from("profiles").select("id, email, tier, is_admin, pro_until, pro_source, created_at"),
           supabase.from("analytics_events").select("event_type, user_id, created_at").gte("created_at", thirtyDaysAgo).limit(5000),
           supabase.from("proyectos").select("id, user_id, created_at"),
+          supabase.from("market_intelligence").select("*").order("created_at", { ascending: false }).limit(2000),
         ]);
         if (promoRes.error) throw promoRes.error;
         if (redRes.error) throw redRes.error;
@@ -145,6 +147,7 @@ export default function AdminPage() {
         if (profilesRes.error) throw profilesRes.error;
         if (analyticsRes.error) throw analyticsRes.error;
         if (proyectosRes.error) throw proyectosRes.error;
+        if (marketRes.error) throw marketRes.error;
         setPromoStats(promoRes.data || []);
         setRedemptions(redRes.data || []);
         setFeedback(fbRes.data || []);
@@ -152,6 +155,7 @@ export default function AdminPage() {
         setProfiles(profilesRes.data || []);
         setAnalytics(analyticsRes.data || []);
         setProyectos(proyectosRes.data || []);
+        setMarketData(marketRes.data || []);
       } catch (e) {
         console.error("admin fetch error:", e);
         setError(e.message || "Error cargando datos");
@@ -329,6 +333,84 @@ export default function AdminPage() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
   }, [proyectos, profiles]);
+
+  // ═══════════════════════════════════════════════
+  // INTELIGENCIA DE MERCADO — helpers
+  // ═══════════════════════════════════════════════
+  // Calcula promedio + mediana sobre una métrica de un grupo. La mediana
+  // es más robusta que el promedio cuando hay outliers (pocos valores muy
+  // extremos distorsionan el promedio).
+  function statsOf(rows, key) {
+    const vals = rows.map(r => Number(r[key])).filter(v => Number.isFinite(v) && v > 0);
+    if (vals.length === 0) return null;
+    const sorted = [...vals].sort((a, b) => a - b);
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const mid = Math.floor(sorted.length / 2);
+    const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    const min = sorted[0], max = sorted[sorted.length - 1];
+    return { avg, median, min, max, n: vals.length };
+  }
+
+  // Agrupa snapshots por una columna (ciudad/sistema/tipo) y calcula
+  // stats de las métricas clave.
+  function aggregateBy(groupKey) {
+    const groups = new Map();
+    marketData.forEach(m => {
+      const k = m[groupKey];
+      if (!k) return;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(m);
+    });
+    return Array.from(groups.entries())
+      .map(([label, rows]) => ({
+        label,
+        n: rows.length,
+        terrenoM2: statsOf(rows, "precio_terreno_m2"),
+        construccionM2: statsOf(rows, "costo_construccion_m2"),
+        ventaM2: statsOf(rows, "precio_venta_m2_promedio"),
+        margen: statsOf(rows, "margen_pct"),
+      }))
+      .sort((a, b) => b.n - a.n);
+  }
+
+  const byCiudad = useMemo(() => aggregateBy("ciudad"), [marketData]);
+  const bySistema = useMemo(() => aggregateBy("sistema_constructivo"), [marketData]);
+  const byTipo = useMemo(() => aggregateBy("tipo_proyecto"), [marketData]);
+
+  // Detecta outliers por métrica global usando IQR (rango intercuartil).
+  // Un valor se marca como outlier si está fuera de [Q1 - 1.5*IQR, Q3 + 1.5*IQR].
+  // Método estándar de estadística descriptiva, más robusto que σ con n pequeño.
+  const outliers = useMemo(() => {
+    const flags = [];
+    const check = (key, labelMetric) => {
+      const vals = marketData.map(m => Number(m[key])).filter(v => Number.isFinite(v) && v > 0);
+      if (vals.length < 4) return;
+      const sorted = [...vals].sort((a, b) => a - b);
+      const q1 = sorted[Math.floor(sorted.length * 0.25)];
+      const q3 = sorted[Math.floor(sorted.length * 0.75)];
+      const iqr = q3 - q1;
+      const lower = q1 - 1.5 * iqr;
+      const upper = q3 + 1.5 * iqr;
+      marketData.forEach(m => {
+        const v = Number(m[key]);
+        if (Number.isFinite(v) && v > 0 && (v < lower || v > upper)) {
+          flags.push({
+            id: m.id,
+            ciudad: m.ciudad,
+            tipo: m.tipo_proyecto,
+            metric: labelMetric,
+            valor: v,
+            rango: `${Math.round(lower)} — ${Math.round(upper)}`,
+            created_at: m.created_at,
+          });
+        }
+      });
+    };
+    check("precio_terreno_m2", "Terreno $/m²");
+    check("costo_construccion_m2", "Construcción $/m²");
+    check("precio_venta_m2_promedio", "Venta $/m²");
+    return flags.slice(0, 20);
+  }, [marketData]);
 
   // ═══════════════════════════════════════════════
   // GUARDS
@@ -647,8 +729,148 @@ export default function AdminPage() {
               </div>
             </details>
           </Section>
+
+          {/* ═══ SECCIÓN 4: INTELIGENCIA DE MERCADO ═══ */}
+          <Section
+            title="Inteligencia de mercado"
+            subtitle={`Snapshots anónimos de cada análisis (${marketData.length} totales). Los datos son agregables y no contienen información identificable.`}
+          >
+            {marketData.length === 0 ? (
+              <p className="text-sm text-slate-500 italic">
+                Sin datos todavía. Cada análisis generado se registrará aquí automáticamente.
+              </p>
+            ) : (
+              <>
+                <p className="text-xs text-slate-400 mb-4">
+                  Se muestra mediana (más robusta ante outliers) junto al promedio. Benchmarks útiles cuando <strong>n ≥ 5</strong>.
+                </p>
+
+                {/* Por ciudad */}
+                <MarketTable label="Por ciudad" rows={byCiudad} />
+
+                {/* Por sistema constructivo */}
+                <div className="mt-5">
+                  <MarketTable label="Por sistema constructivo" rows={bySistema} />
+                </div>
+
+                {/* Por tipo de proyecto */}
+                <div className="mt-5">
+                  <MarketTable label="Por tipo de proyecto" rows={byTipo} />
+                </div>
+
+                {/* Outliers */}
+                {outliers.length > 0 && (
+                  <div className="mt-5 bg-amber-900/20 border border-amber-800 rounded-xl p-4">
+                    <p className="text-xs uppercase tracking-wide text-amber-300 font-semibold mb-2">
+                      Valores atípicos detectados ({outliers.length})
+                    </p>
+                    <p className="text-xs text-slate-400 mb-3">
+                      Detectados por IQR. Pueden ser errores de data, proyectos únicos, o data de práctica. Revisar antes de usar en reportes.
+                    </p>
+                    <div className="max-h-60 overflow-y-auto space-y-1">
+                      {outliers.map((o, i) => (
+                        <div key={i} className="text-xs text-slate-300 font-mono flex flex-wrap gap-2">
+                          <span className="text-amber-300">{o.metric}:</span>
+                          <span>US${Math.round(o.valor).toLocaleString()}</span>
+                          <span className="text-slate-500">(rango: US${o.rango})</span>
+                          {o.ciudad && <span className="text-slate-500">· {o.ciudad}</span>}
+                          {o.tipo && <span className="text-slate-500">· {o.tipo}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Lista cruda */}
+                <details className="mt-5">
+                  <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-200">
+                    Ver snapshots recientes ({marketData.length})
+                  </summary>
+                  <div className="mt-3 overflow-x-auto max-h-96">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-slate-700">
+                        <tr className="uppercase text-slate-400 border-b border-slate-600">
+                          <th className="text-left py-2 pr-2">Fecha</th>
+                          <th className="text-left py-2 pr-2">Ciudad</th>
+                          <th className="text-left py-2 pr-2">Sistema</th>
+                          <th className="text-left py-2 pr-2">Tipo</th>
+                          <th className="text-right py-2 pr-2">Terreno $/m²</th>
+                          <th className="text-right py-2 pr-2">Constr. $/m²</th>
+                          <th className="text-right py-2 pr-2">Venta $/m²</th>
+                          <th className="text-right py-2">Margen</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-slate-200">
+                        {marketData.slice(0, 100).map(m => (
+                          <tr key={m.id} className="border-b border-slate-700/50">
+                            <td className="py-1.5 pr-2 text-slate-400">{formatDateShort(m.created_at)}</td>
+                            <td className="py-1.5 pr-2">{m.ciudad || "—"}</td>
+                            <td className="py-1.5 pr-2 text-slate-400">{m.sistema_constructivo || "—"}</td>
+                            <td className="py-1.5 pr-2 text-slate-400">{m.tipo_proyecto || "—"}</td>
+                            <td className="py-1.5 pr-2 text-right font-mono">{m.precio_terreno_m2 ? Math.round(m.precio_terreno_m2).toLocaleString() : "—"}</td>
+                            <td className="py-1.5 pr-2 text-right font-mono">{m.costo_construccion_m2 ? Math.round(m.costo_construccion_m2).toLocaleString() : "—"}</td>
+                            <td className="py-1.5 pr-2 text-right font-mono">{m.precio_venta_m2_promedio ? Math.round(m.precio_venta_m2_promedio).toLocaleString() : "—"}</td>
+                            <td className="py-1.5 text-right font-mono">{m.margen_pct != null ? `${(m.margen_pct * 100).toFixed(1)}%` : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              </>
+            )}
+          </Section>
         </div>
       </div>
     </>
+  );
+}
+
+// ═══════════════════════════════════════════════
+// COMPONENTE: Tabla de mercado por categoría
+// ═══════════════════════════════════════════════
+function MarketTable({ label, rows }) {
+  if (rows.length === 0) return null;
+  const cell = (stat) => stat
+    ? <>
+        <div className="font-mono font-semibold">{Math.round(stat.median).toLocaleString()}</div>
+        <div className="text-[10px] text-slate-500">prom: {Math.round(stat.avg).toLocaleString()}</div>
+      </>
+    : <span className="text-slate-500">—</span>;
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">{label}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="uppercase text-slate-400 border-b border-slate-600">
+              <th className="text-left py-2 pr-2">Categoría</th>
+              <th className="text-right py-2 pr-2">n</th>
+              <th className="text-right py-2 pr-2">Terreno $/m² (mediana)</th>
+              <th className="text-right py-2 pr-2">Construcción $/m²</th>
+              <th className="text-right py-2 pr-2">Venta $/m²</th>
+              <th className="text-right py-2">Margen</th>
+            </tr>
+          </thead>
+          <tbody className="text-slate-200">
+            {rows.map(r => (
+              <tr key={r.label} className="border-b border-slate-700/50">
+                <td className="py-2 pr-2">{r.label}</td>
+                <td className="py-2 pr-2 text-right">
+                  <span className={r.n >= 5 ? "text-emerald-400" : "text-slate-500"}>{r.n}</span>
+                </td>
+                <td className="py-2 pr-2 text-right">{cell(r.terrenoM2)}</td>
+                <td className="py-2 pr-2 text-right">{cell(r.construccionM2)}</td>
+                <td className="py-2 pr-2 text-right">{cell(r.ventaM2)}</td>
+                <td className="py-2 text-right">
+                  {r.margen ? <span className="font-mono font-semibold">{(r.margen.median * 100).toFixed(1)}%</span> : <span className="text-slate-500">—</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

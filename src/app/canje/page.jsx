@@ -167,9 +167,12 @@ function CanjeContent() {
               </form>
             )}
 
-            <div className="mt-6 pt-5 border-t border-slate-600">
+            <div className="mt-6 pt-5 border-t border-slate-600 space-y-3">
               <p className="text-xs text-slate-500">
                 Los códigos promocionales tienen fechas de validez y cupos limitados. Un mismo email solo puede canjear un código una vez.
+              </p>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                <strong className="text-slate-400">Uso de datos agregados:</strong> al generar análisis, los datos del proyecto (ciudad, sistema constructivo, costos, precios, tipo) se guardan de forma <strong>anónima</strong> para producir benchmarks de mercado. <strong>No compartimos</strong> nombre del proyecto, email ni ningún dato identificable. Los datos solo se usan en agregado.
               </p>
             </div>
           </div>
