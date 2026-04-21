@@ -69,6 +69,20 @@ const TIPOS_PROYECTO = [
   "Mixto (residencial + comercial)",
 ];
 
+// Rangos de precio usados en la pregunta rápida dentro del modal de feedback.
+// Mismos valores que PricingSurveyModal para consistencia en reporting.
+const RANGOS_PRECIO = [
+  { value: "0-10", label: "Hasta $10" },
+  { value: "10-25", label: "$10–25" },
+  { value: "25-50", label: "$25–50" },
+  { value: "50-100", label: "$50–100" },
+  { value: ">100", label: "Más de $100" },
+];
+
+// localStorage flag: si el usuario cerró el modal suave sin llenar,
+// no se lo volvemos a mostrar (respeta autonomía).
+const SURVEY_SOFT_DISMISSED_KEY = "estateisreal_survey_soft_dismissed";
+
 const fmt = (n, dec = 0) => n == null || isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
 const fmtPct = (n, dec = 1) => n == null || isNaN(n) ? "—" : (n * 100).toFixed(dec) + "%";
 const fmtMoney = (n) => n == null || isNaN(n) ? "—" : fmt(n);
@@ -609,6 +623,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
   const [feedback1, setFeedback1] = useState("");
   const [feedback2, setFeedback2] = useState("");
   const [feedback3, setFeedback3] = useState("");
+  const [feedback4, setFeedback4] = useState(""); // Rango de precio mensual
   const [feedbackOtro, setFeedbackOtro] = useState("");
   const [validationErrors, setValidationErrors] = useState([]);
 
@@ -627,11 +642,14 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
 
-  // ─── Gate de encuesta para usuarios Pro temporal (promo) ───
-  // Se muestra después del 3er análisis generado o antes de la 2da impresión.
-  // Tiene botón "Saltar por ahora" para respetar autonomía del usuario, pero
-  // reaparece en cada uso hasta que se complete. Una vez completada, nunca más.
-  const [showSurveyGate, setShowSurveyGate] = useState(false);
+  // ─── Gate de encuesta (unificado: 'required' para Pro promo, 'soft' para resto) ───
+  //
+  // Pro promo (TUR2026): gate duro tras 3er análisis o antes de la 2da impresión.
+  // Botón "Saltar por ahora" presente, pero reaparece en cada uso hasta completarse.
+  //
+  // Resto de usuarios (free + Stripe): modal suave tras 2do análisis. Se cierra con X
+  // o clickeando fuera. Si dismissean, no reaparece (flag en localStorage).
+  const [surveyMode, setSurveyMode] = useState(null); // null | 'soft' | 'required'
 
   const shouldShowGate = useCallback(async (trigger) => {
     if (!user || !isPromoPro || surveyCompleted || !supabase) return false;
@@ -643,6 +661,21 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       .eq("user_id", user.id)
       .eq("event_type", eventType);
     return (count || 0) >= threshold;
+  }, [user, isPromoPro, surveyCompleted]);
+
+  // Evalúa si mostrar el modal suave (no-promo, post 2do análisis, sin dismiss previo)
+  const shouldShowSoftSurvey = useCallback(async () => {
+    if (!user || isPromoPro || surveyCompleted || !supabase) return false;
+    try {
+      const dismissed = localStorage.getItem(SURVEY_SOFT_DISMISSED_KEY);
+      if (dismissed) return false;
+    } catch {}
+    const { count } = await supabase
+      .from("analytics_events")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("event_type", "analisis_generado");
+    return (count || 0) >= 2;
   }, [user, isPromoPro, surveyCompleted]);
 
   const NON_NEGATIVE_KEYS = new Set(["areaTerreno","precioTerreno","costoM2","equityCapital","mesesPredev","mesesConstruccion","mesesPostVenta","tasaInteres","drawFactor","comisionBanco","preventaPct","cobroPct","softCosts","comisionVenta","marketing","contingencias"]);
@@ -897,17 +930,19 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       }
     }
 
-    // Gate: si es Pro promo y ya acumula ≥3 análisis sin completar encuesta
+    // Gate duro (Pro promo, ≥3 análisis) prevalece sobre soft (cualquier user, ≥2)
     if (await shouldShowGate("analisis")) {
-      setTimeout(() => setShowSurveyGate(true), 800);
+      setTimeout(() => setSurveyMode("required"), 800);
+    } else if (await shouldShowSoftSurvey()) {
+      setTimeout(() => setSurveyMode("soft"), 800);
     }
-  }, [validateFields, trackEvent, sup, mix, thresholds, shouldShowGate]);
+  }, [validateFields, trackEvent, sup, mix, thresholds, shouldShowGate, shouldShowSoftSurvey]);
 
   // Imprimir con feedback
   const handlePrint = useCallback(async () => {
     // Gate pre-impresión: si Pro promo con ≥1 impresión previa y sin encuesta completada
     if (await shouldShowGate("print")) {
-      setShowSurveyGate(true);
+      setSurveyMode("required");
       return;
     }
     if (feedbackSent) {
@@ -925,13 +960,28 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       await saveFeedbackToDb(sup.proyecto || "Sin nombre", feedback1, respuesta2, feedback3);
       await trackEvent("feedback_submitted", { proyecto: sup.proyecto, feedback1, feedback2: respuesta2, feedback3 });
       await trackEvent("impresion_realizada", { proyecto: sup.proyecto });
+
+      // Si respondió la 4ta pregunta de precio, guardamos en pricing_survey
+      // Esto maximiza data point rate: todos los que imprimen aportan precio
+      if (feedback4 && supabase) {
+        try {
+          await supabase.from("pricing_survey").insert({
+            user_id: user?.id || null,
+            email: user?.email || null,
+            precio_rango: feedback4,
+            comentario: `Desde feedback pre-impresión · ${sup.proyecto || "Sin nombre"}`,
+          });
+        } catch (pe) {
+          console.log("pricing_survey (pre-print) error:", pe);
+        }
+      }
     } catch (e) {
       console.log("Error guardando feedback:", e);
     }
     setFeedbackSent(true);
     setShowFeedback(false);
     setTimeout(() => window.print(), 300);
-  }, [feedback1, feedback2, feedback3, feedbackOtro, sup.proyecto, saveFeedbackToDb, trackEvent]);
+  }, [feedback1, feedback2, feedback3, feedback4, feedbackOtro, sup.proyecto, saveFeedbackToDb, trackEvent, user]);
 
   const skipFeedbackAndPrint = useCallback(async () => {
     setFeedbackSent(true);
@@ -1138,9 +1188,15 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
         />
       )}
       <PricingSurveyModal
-        open={showSurveyGate}
-        onClose={() => setShowSurveyGate(false)}
-        required={true}
+        open={surveyMode !== null}
+        onClose={() => {
+          // Si cerraron el modal suave sin completar, marca dismissed en localStorage
+          if (surveyMode === "soft") {
+            try { localStorage.setItem(SURVEY_SOFT_DISMISSED_KEY, Date.now().toString()); } catch {}
+          }
+          setSurveyMode(null);
+        }}
+        required={surveyMode === "required"}
         onCompleted={() => { refreshProfile?.(); }}
       />
       {/* Marca de agua para usuarios free (solo visible en print) */}
@@ -2124,7 +2180,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
             <div className="text-center mb-5">
               <span className="text-base font-black tracking-widest text-slate-800" style={{letterSpacing:"0.15em"}}>ESTATE<span className="text-blue-500">is</span>REAL</span>
-              <p className="text-sm text-slate-500 mt-2">Antes de imprimir, ayúdanos con 3 preguntas rápidas para mejorar la herramienta.</p>
+              <p className="text-sm text-slate-500 mt-2">Antes de imprimir, ayúdanos con 4 preguntas rápidas para mejorar la herramienta.</p>
             </div>
 
             <div className="space-y-4">
@@ -2169,6 +2225,18 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                     <button key={opt} onClick={() => setFeedback3(opt)}
                       className={`px-3 py-2 text-xs rounded-lg border transition ${feedback3 === opt ? "bg-blue-600 text-white border-blue-600" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"}`}>
                       {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">4. ¿Cuánto pagarías al mes por acceso Pro? <span className="text-slate-400 font-normal">(opcional)</span></label>
+                <div className="flex flex-wrap gap-2">
+                  {RANGOS_PRECIO.map(r => (
+                    <button key={r.value} type="button" onClick={() => setFeedback4(r.value)}
+                      className={`px-3 py-2 text-xs rounded-lg border transition ${feedback4 === r.value ? "bg-emerald-600 text-white border-emerald-600" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-emerald-300"}`}>
+                      {r.label}
                     </button>
                   ))}
                 </div>
