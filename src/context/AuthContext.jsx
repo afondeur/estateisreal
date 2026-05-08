@@ -217,10 +217,13 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   // H14: Reset password
+  // El callback usa 'next' para llevar al usuario a /reset-password después del
+  // exchange. Sin esto, el usuario quedaba con sesión recovery activa pero sin
+  // pantalla para ingresar nueva contraseña — bug original.
   const resetPassword = useCallback(async (email) => {
     if (!supabase) return { error: { message: "Servicio no disponible" } };
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + "/auth/callback",
+      redirectTo: window.location.origin + "/auth/callback?next=/reset-password",
     });
     return { error };
   }, []);
