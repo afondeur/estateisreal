@@ -160,7 +160,7 @@ function calcAll(sup, mix, thresholds) {
     { nombre: "Margen", valor: margen, umbral: thresholds.margenMin, tipo: "min" },
     { nombre: "MOIC", valor: moic, umbral: thresholds.moicMin, tipo: "min" },
     { nombre: "Incremento", valor: markup, umbral: thresholds.markupMin, tipo: "min" },
-    { nombre: "TIR", valor: tir, umbral: thresholds.tirMin, tipo: "min" },
+    { nombre: "TIR (simplificada)", valor: tir, umbral: thresholds.tirMin, tipo: "min" },
     { nombre: "LTV", valor: ltv, umbral: thresholds.ltvMax, tipo: "max" },
     { nombre: "LTC", valor: ltc, umbral: thresholds.ltcMax, tipo: "max" },
   ];
@@ -1288,7 +1288,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
             { l: "ROI", v: fmtPct(r.roi) },
             { l: "Margen", v: fmtPct(r.margen) },
             { l: "MOIC", v: r.moic?.toFixed(2) + "x" },
-            { l: "TIR anual", v: fmtPct(r.tir) },
+            { l: "TIR simpl.", v: fmtPct(r.tir) },
           ].map(m => (
             <div key={m.l} className="whitespace-nowrap">
               <span className="text-slate-400">{m.l}: </span>
@@ -1591,7 +1591,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                 <PctField label="Margen neto mínimo" value={thresholds.margenMin} onChange={v => updateThresh("margenMin", v)} step={0.5} />
                 <InputField label="MOIC mínimo (veces)" value={thresholds.moicMin} onChange={v => updateThresh("moicMin", v)} step={0.1} suffix="x" />
                 <InputField label="Incremento sobre costo mín. (Markup)" value={thresholds.markupMin} onChange={v => updateThresh("markupMin", v)} step={0.05} suffix="x" />
-                <PctField label="TIR mínima anualizada" value={thresholds.tirMin} onChange={v => updateThresh("tirMin", v)} step={1} />
+                <PctField label="TIR mínima (simplificada)" value={thresholds.tirMin} onChange={v => updateThresh("tirMin", v)} step={1} />
                 <PctField label="LTV máximo (préstamo/valor)" value={thresholds.ltvMax} onChange={v => updateThresh("ltvMax", v)} step={1} />
                 <PctField label="LTC máximo (préstamo/costo)" value={thresholds.ltcMax} onChange={v => updateThresh("ltcMax", v)} step={1} />
               </div>
@@ -1644,7 +1644,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                 <MetricCard label="Margen Neto" value={r.margen} format="pct" threshold={thresholds.margenMin} highlight desc="Utilidad ÷ Ingreso. Cuánto queda de cada unidad monetaria vendida." />
                 <MetricCard label="MOIC — Múltiplo sobre Capital" value={r.moic} format="x" threshold={thresholds.moicMin} highlight desc="Veces que el socio recupera su inversión. >1x = ganancia." />
                 <MetricCard label="Incremento sobre Costo (Markup)" value={r.markup} format="x" threshold={thresholds.markupMin} highlight desc="Ingreso ÷ Costo total. Colchón sobre punto de equilibrio." />
-                <MetricCard label="TIR — Tasa Interna de Retorno" value={r.tir} format="pct" threshold={thresholds.tirMin} highlight desc="Retorno anualizado sobre equity. Comparable entre proyectos." />
+                <MetricCard label="TIR (simplificada)" value={r.tir} format="pct" threshold={thresholds.tirMin} highlight desc="Retorno anualizado sobre el capital. Supone aporte de capital al inicio y retorno al final del proyecto." />
                 <MetricCard label="LTV — Préstamo vs Valor del proyecto" value={r.ltv} format="pct" threshold={thresholds.ltvMax} type="max" desc="Préstamo ÷ Ingreso total. Menor = menos riesgo para el financiador." />
                 <MetricCard label="LTC — Préstamo vs Costo total" value={r.ltc} format="pct" threshold={thresholds.ltcMax} type="max" desc="Préstamo ÷ Costo total. Menor = más respaldado por equity." />
                 <MetricCard label="Duración total del proyecto" value={r.mesesTotal} format="num" desc="Pre-desarrollo + construcción + post-venta, en meses." />
@@ -1802,7 +1802,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                   <div className="text-4xl mb-3">🔒</div>
                   <h3 className="text-lg font-bold text-slate-800 mb-2">Tablas de Sensibilidad</h3>
                   <p className="text-sm text-slate-500 mb-4">Descubre cómo cambian tus resultados al variar costos, precios y condiciones del banco. Disponible en el plan Pro.</p>
-                  <a href="/pricing" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition text-sm">Cambiar a Pro — $25/mes</a>
+                  <a href="/pricing" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition text-sm">Ver planes Pro</a>
                   <p className="text-xs text-slate-400 mt-3">7 tablas de sensibilidad 7x7 con semáforo visual</p>
                   <button onClick={() => setTab("resultados")} className="mt-3 text-sm text-blue-600 hover:text-blue-500 font-medium transition">← Volver a Resultados</button>
                 </div>
@@ -1839,7 +1839,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
 
             {/* Tabla 3: TIR vs Tasa Interés × Duración (custom labels) */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <h4 className="text-sm font-bold text-slate-700 mb-3">3. TIR — ¿Cómo afecta la tasa del banco y el plazo de construcción al retorno anualizado?</h4>
+              <h4 className="text-sm font-bold text-slate-700 mb-3">3. TIR (simplificada) — ¿Cómo afecta la tasa del banco y el plazo de construcción al retorno anualizado?</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
                   <thead>
@@ -1901,7 +1901,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
 
             {/* Tabla 5: TIR vs % Preventas × Equity */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <h4 className="text-sm font-bold text-slate-700 mb-3">5. TIR — ¿Qué pasa si varían las preventas o si los socios ponen más capital?</h4>
+              <h4 className="text-sm font-bold text-slate-700 mb-3">5. TIR (simplificada) — ¿Qué pasa si varían las preventas o si los socios ponen más capital?</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
                   <thead>
@@ -2019,7 +2019,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                   <div className="text-4xl mb-3">🔒</div>
                   <h3 className="text-lg font-bold text-slate-800 mb-2">Escenarios de Mercado</h3>
                   <p className="text-sm text-slate-500 mb-4">Evalúa cómo se comporta tu proyecto en 5 escenarios diferentes: desde pesimista hasta optimista. Disponible en el plan Pro.</p>
-                  <a href="/pricing" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition text-sm">Cambiar a Pro — $25/mes</a>
+                  <a href="/pricing" className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition text-sm">Ver planes Pro</a>
                   <p className="text-xs text-slate-400 mt-3">5 escenarios + punto de equilibrio detallado</p>
                   <button onClick={() => setTab("resultados")} className="mt-3 text-sm text-blue-600 hover:text-blue-500 font-medium transition">← Volver a Resultados</button>
                 </div>

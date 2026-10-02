@@ -48,7 +48,6 @@ export default function PricingPage() {
       name: "Pro",
       price: "$25",
       period: "/mes",
-      yearlyPrice: "$300/año (ahorra $48)",
       desc: "Para desarrolladores profesionales",
       features: [
         "Todo lo del plan Gratuito",

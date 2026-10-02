@@ -97,7 +97,7 @@ export default function Home() {
           {/* Features */}
           <div className="grid md:grid-cols-3 gap-6 mt-16 text-left">
             {[
-              { icon: "📊", title: "7 Métricas Financieras", desc: "ROI, Margen, MOIC, Markup, TIR, LTV y LTC — todo calculado al instante." },
+              { icon: "📊", title: "7 Métricas Financieras", desc: "ROI, Margen, MOIC, Markup, TIR simplificada, LTV y LTC — todo calculado al instante." },
               { icon: "📈", title: "Tablas de Sensibilidad", desc: "Ve cómo cambian los resultados si varían costos, precios o condiciones del banco." },
               { icon: "🎯", title: "Semáforo VIABLE · PRECAUCIÓN · NO VIABLE", desc: "Decisión inmediata basada en umbrales configurables de margen, ROI, TIR y MOIC." },
             ].map((f) => (
