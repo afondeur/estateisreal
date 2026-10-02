@@ -1,7 +1,6 @@
 import { createSupabaseServerClient } from "../../../lib/supabase-server";
 import { rateLimit } from "../../../lib/rate-limit";
-
-const MONTHLY_LIMIT = 3;
+import { FREE_MONTHLY_LIMIT as MONTHLY_LIMIT } from "../../../lib/usage";
 
 export async function GET(request) {
   try {

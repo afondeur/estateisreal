@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import UsageLimitModal from "./UsageLimitModal";
+import { FREE_MONTHLY_LIMIT } from "../lib/usage";
 import PricingSurveyModal from "./PricingSurveyModal";
 import { supabase } from "../lib/supabase";
 
@@ -82,6 +83,9 @@ const RANGOS_PRECIO = [
 // localStorage flag: si el usuario cerró el modal suave sin llenar,
 // no se lo volvemos a mostrar (respeta autonomía).
 const SURVEY_SOFT_DISMISSED_KEY = "estateisreal_survey_soft_dismissed";
+// Borrador del visitante anónimo: se guarda al pedir resultados sin cuenta y se
+// restaura al volver ya registrado, para que no pierda lo que escribió.
+const ANON_DRAFT_KEY = "estateisreal_anon_draft";
 
 const fmt = (n, dec = 0) => n == null || isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
 const fmtPct = (n, dec = 1) => n == null || isNaN(n) ? "—" : (n * 100).toFixed(dec) + "%";
@@ -635,6 +639,12 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
   const [projectMsg, setProjectMsg] = useState("");
   const [showUsageLimit, setShowUsageLimit] = useState(false);
   const [usageCount, setUsageCount] = useState(0);
+  const [usageLimitAnonymous, setUsageLimitAnonymous] = useState(false);
+  const [usageRemaining, setUsageRemaining] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  // Free/anónimo: los resultados se congelan en los datos del último "Generar".
+  // Pro/admin: resultados en vivo.
+  const [snapshot, setSnapshot] = useState(null);
 
   // ─── Estado de compartir ───
   const [shareLink, setShareLink] = useState("");
@@ -715,6 +725,22 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
     ]);
   }, []);
 
+  // Restaurar borrador anónimo (máx. 24 h) cuando el usuario vuelve con sesión
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const raw = localStorage.getItem(ANON_DRAFT_KEY);
+      if (!raw) return;
+      localStorage.removeItem(ANON_DRAFT_KEY);
+      const draft = JSON.parse(raw);
+      if (!draft?.sup || Date.now() - (draft.savedAt || 0) > 24 * 3600 * 1000) return;
+      setSup({ ...DEFAULT_SUPUESTOS, ...draft.sup });
+      if (Array.isArray(draft.mix) && draft.mix.length) setMix(draft.mix);
+      setProjectMsg("Recuperamos los datos que habías ingresado. Pulsa «Generar Análisis».");
+      setTimeout(() => setProjectMsg(""), 5000);
+    } catch {}
+  }, [user]);
+
   // ─── Funciones de proyectos ───
   const refreshProjects = useCallback(async () => {
     if (!user) return;
@@ -766,6 +792,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
     setSup({ ...DEFAULT_SUPUESTOS, ...data.supuestos });
     setMix(data.mix?.length ? data.mix : DEFAULT_MIX);
     setThresholds({ ...DEFAULT_THRESHOLDS, ...data.thresholds });
+    setSnapshot(null);
     setCurrentProjectId(data.id);
     setShowProjectsPanel(false);
     setProjectMsg("Proyecto cargado: " + data.nombre);
@@ -790,6 +817,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
     setSup(DEFAULT_SUPUESTOS);
     setMix(DEFAULT_MIX);
     setThresholds(DEFAULT_THRESHOLDS);
+    setSnapshot(null);
     setCurrentProjectId(null);
     setValidationErrors([]);
     setTab("supuestos");
@@ -872,26 +900,44 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       return;
     }
 
-    // C3: Server-side usage enforcement — block if not allowed
+    // El servidor verifica el límite y registra el análisis en un solo paso
+    setGenerating(true);
     try {
-      const res = await fetch("/api/check-usage");
-      const usage = await res.json();
+      const res = await fetch("/api/register-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proyecto: sup.proyecto }),
+      });
+      const usage = await res.json().catch(() => ({}));
       if (!usage.allowed) {
-        setUsageCount(usage.count);
-        setShowUsageLimit(true);
-        setValidationErrors([`Has alcanzado el límite de ${usage.limit} análisis este mes. Cambia a Pro para análisis ilimitados.`]);
+        if (usage.reason === "anonymous") {
+          try { localStorage.setItem(ANON_DRAFT_KEY, JSON.stringify({ sup, mix, savedAt: Date.now() })); } catch {}
+          setUsageLimitAnonymous(true);
+          setShowUsageLimit(true);
+        } else if (usage.reason === "limit") {
+          setUsageLimitAnonymous(false);
+          setUsageCount(usage.count);
+          setUsageRemaining(0);
+          setShowUsageLimit(true);
+          setValidationErrors([`Usaste tus ${usage.limit} análisis gratuitos de este mes. Pasa a Pro para análisis ilimitados.`]);
+        } else {
+          setValidationErrors([usage.error || "No se pudo verificar tu uso. Intenta de nuevo."]);
+        }
         return;
       }
+      setUsageRemaining(usage.unlimited ? null : usage.remaining);
     } catch {
       // Fail-closed: block on network error
       setValidationErrors(["No se pudo verificar tu uso. Intenta de nuevo."]);
       return;
+    } finally {
+      setGenerating(false);
     }
 
+    setSnapshot({ sup, mix });
     setValidationErrors([]);
     setTab("resultados");
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
-    await trackEvent("analisis_generado", { proyecto: sup.proyecto });
 
     // Snapshot anónimo para inteligencia de mercado (no bloquea el flujo)
     if (supabase) {
@@ -992,6 +1038,17 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
   }, [trackEvent, sup.proyecto]);
 
   const r = useMemo(() => calcAll(sup, mix, thresholds), [sup, mix, thresholds]);
+
+  // Resultados visibles: en vivo para Pro/admin; congelados en el último "Generar"
+  // para free y anónimos (los umbrales sí se aplican en vivo). null = aún sin generar.
+  const isLive = tier === "pro";
+  const rSnapshot = useMemo(
+    () => (snapshot ? calcAll(snapshot.sup, snapshot.mix, thresholds) : null),
+    [snapshot, thresholds]
+  );
+  const rView = isLive ? r : rSnapshot;
+  const isStale = !isLive && snapshot != null &&
+    (JSON.stringify(snapshot.sup) !== JSON.stringify(sup) || JSON.stringify(snapshot.mix) !== JSON.stringify(mix));
 
   // 7 tablas de sensibilidad como en el Excel
   const sensMargen = useMemo(() => tab === "sensibilidad" ? calcSensitivity(sup, mix, thresholds, "margen", "costoM2", "precioVenta", 0, 0, pctVar) : null, [tab, sup, mix, thresholds, pctVar]);
@@ -1184,6 +1241,8 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       {showUsageLimit && (
         <UsageLimitModal
           analysisCount={usageCount}
+          limit={FREE_MONTHLY_LIMIT}
+          anonymous={usageLimitAnonymous}
           onClose={() => setShowUsageLimit(false)}
         />
       )}
@@ -1270,9 +1329,9 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
             </div>
             <div
               className="px-4 py-2 rounded-lg font-bold text-sm text-white shadow-lg"
-              style={{ backgroundColor: r.decisionColor }}
+              style={{ backgroundColor: rView ? rView.decisionColor : "#64748b" }}
             >
-              {r.decision}
+              {rView ? rView.decision : "PENDIENTE"}
             </div>
           </div>
         </div>
@@ -1282,13 +1341,13 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       <div className="no-print bg-slate-900 border-b border-slate-700 px-4 py-2">
         <div className="max-w-5xl mx-auto flex gap-6 text-xs overflow-x-auto">
           {[
-            { l: "Ingreso Total", v: fmtUSD(r.ingresoTotal) },
-            { l: "Costo Total", v: fmtUSD(r.costoTotal) },
-            { l: "Utilidad Neta", v: fmtUSD(r.utilidadNeta) },
-            { l: "ROI", v: fmtPct(r.roi) },
-            { l: "Margen", v: fmtPct(r.margen) },
-            { l: "MOIC", v: r.moic?.toFixed(2) + "x" },
-            { l: "TIR simpl.", v: fmtPct(r.tir) },
+            { l: "Ingreso Total", v: fmtUSD(rView?.ingresoTotal) },
+            { l: "Costo Total", v: fmtUSD(rView?.costoTotal) },
+            { l: "Utilidad Neta", v: fmtUSD(rView?.utilidadNeta) },
+            { l: "ROI", v: fmtPct(rView?.roi) },
+            { l: "Margen", v: fmtPct(rView?.margen) },
+            { l: "MOIC", v: rView ? rView.moic?.toFixed(2) + "x" : "—" },
+            { l: "TIR simpl.", v: fmtPct(rView?.tir) },
           ].map(m => (
             <div key={m.l} className="whitespace-nowrap">
               <span className="text-slate-400">{m.l}: </span>
@@ -1609,9 +1668,10 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
               )}
               <button
                 onClick={handleGenerar}
-                className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white text-lg font-bold rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95"
+                disabled={generating}
+                className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white text-lg font-bold rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95 disabled:opacity-50"
               >
-                Generar Análisis
+                {generating ? "Generando..." : "Generar Análisis"}
               </button>
             </div>
 
@@ -1622,15 +1682,46 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
         {/* ═══ TAB: RESULTADOS ═══ */}
         <div className="print-section" style={{ display: tab === "resultados" ? "block" : "none" }}>
           <div className="print-header-bar" style={{display:"none"}}><div><span className="brand">ESTATE<span className="accent">is</span>REAL</span><span style={{marginLeft:"10px",fontSize:"8px",color:"#94a3b8"}}>Prefactibilidad Inmobiliaria v1.0</span></div><div className="project-info">{sup.proyecto && <><strong>{sup.proyecto}</strong> — {sup.ubicacion}<br/>{sup.fecha}</>}</div></div>
+          {!rView ? (
+            <div className="no-print bg-white rounded-xl border border-slate-200 p-8 text-center my-6">
+              <div className="text-3xl mb-2">📊</div>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">Aún no has generado el análisis</h3>
+              {user ? (
+                <>
+                  <p className="text-sm text-slate-500 mb-4">Completa los supuestos y pulsa «Generar Análisis» para ver los resultados.</p>
+                  <button onClick={() => setTab("supuestos")} className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition">Ir a Supuestos</button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-500 mb-4">Regístrate gratis para ver los resultados: 5 análisis completos al mes.</p>
+                  <a href="/registro" className="inline-block px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition">Registrarme gratis</a>
+                </>
+              )}
+            </div>
+          ) : (
           <div className="space-y-4 pb-8">
+            {isStale && (
+              <div className="no-print bg-amber-50 border border-amber-300 rounded-xl p-4 text-amber-900 text-sm flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+                <div>
+                  <strong>Cambiaste datos desde el último análisis.</strong> Estos resultados corresponden a la versión anterior.
+                  {usageRemaining != null && <> Te quedan <strong>{usageRemaining}</strong> de {FREE_MONTHLY_LIMIT} análisis este mes.</>}
+                </div>
+                <button onClick={handleGenerar} disabled={generating} className="shrink-0 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-lg transition disabled:opacity-50">
+                  {generating ? "Generando..." : "Generar de nuevo"}
+                </button>
+              </div>
+            )}
+            {!isLive && !isStale && usageRemaining != null && (
+              <div className="no-print text-xs text-slate-400 text-center">Te quedan {usageRemaining} de {FREE_MONTHLY_LIMIT} análisis gratuitos este mes. <a href="/pricing" className="text-blue-400 hover:text-blue-300">Ver planes Pro</a></div>
+            )}
             {/* Semáforo Principal */}
-            <div className="rounded-xl p-6 text-center text-white shadow-lg" style={{ backgroundColor: r.decisionColor }}>
-              <div className="text-4xl font-black mb-1">{r.decision}</div>
-              <div className="text-sm opacity-90">{r.cumple}/7 métricas cumplen umbral mínimo</div>
+            <div className="rounded-xl p-6 text-center text-white shadow-lg" style={{ backgroundColor: rView.decisionColor }}>
+              <div className="text-4xl font-black mb-1">{rView.decision}</div>
+              <div className="text-sm opacity-90">{rView.cumple}/7 métricas cumplen umbral mínimo</div>
             </div>
 
             {/* H18: Financing warning */}
-            {r.financingWarning && (
+            {rView.financingWarning && (
               <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 text-amber-800 text-sm">
                 <strong>Advertencia:</strong> La estructura de financiamiento es matemáticamente imposible. El denominador del cálculo de préstamo es cero o negativo (tasa de interés &times; draw factor &times; plazo + comisión bancaria &ge; 100%). Revisa los supuestos de financiamiento.
               </div>
@@ -1640,14 +1731,14 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Métricas de Inversión</h3>
               <div className="grid grid-cols-4 gap-3">
-                <MetricCard label="ROI — Retorno sobre Inversión" value={r.roi} format="pct" threshold={thresholds.roiMin} highlight desc="Utilidad ÷ Costo total. Ganancia por cada unidad monetaria invertida." />
-                <MetricCard label="Margen Neto" value={r.margen} format="pct" threshold={thresholds.margenMin} highlight desc="Utilidad ÷ Ingreso. Cuánto queda de cada unidad monetaria vendida." />
-                <MetricCard label="MOIC — Múltiplo sobre Capital" value={r.moic} format="x" threshold={thresholds.moicMin} highlight desc="Veces que el socio recupera su inversión. >1x = ganancia." />
-                <MetricCard label="Incremento sobre Costo (Markup)" value={r.markup} format="x" threshold={thresholds.markupMin} highlight desc="Ingreso ÷ Costo total. Colchón sobre punto de equilibrio." />
-                <MetricCard label="TIR (simplificada)" value={r.tir} format="pct" threshold={thresholds.tirMin} highlight desc="Retorno anualizado sobre el capital. Supone aporte de capital al inicio y retorno al final del proyecto." />
-                <MetricCard label="LTV — Préstamo vs Valor del proyecto" value={r.ltv} format="pct" threshold={thresholds.ltvMax} type="max" desc="Préstamo ÷ Ingreso total. Menor = menos riesgo para el financiador." />
-                <MetricCard label="LTC — Préstamo vs Costo total" value={r.ltc} format="pct" threshold={thresholds.ltcMax} type="max" desc="Préstamo ÷ Costo total. Menor = más respaldado por equity." />
-                <MetricCard label="Duración total del proyecto" value={r.mesesTotal} format="num" desc="Pre-desarrollo + construcción + post-venta, en meses." />
+                <MetricCard label="ROI — Retorno sobre Inversión" value={rView.roi} format="pct" threshold={thresholds.roiMin} highlight desc="Utilidad ÷ Costo total. Ganancia por cada unidad monetaria invertida." />
+                <MetricCard label="Margen Neto" value={rView.margen} format="pct" threshold={thresholds.margenMin} highlight desc="Utilidad ÷ Ingreso. Cuánto queda de cada unidad monetaria vendida." />
+                <MetricCard label="MOIC — Múltiplo sobre Capital" value={rView.moic} format="x" threshold={thresholds.moicMin} highlight desc="Veces que el socio recupera su inversión. >1x = ganancia." />
+                <MetricCard label="Incremento sobre Costo (Markup)" value={rView.markup} format="x" threshold={thresholds.markupMin} highlight desc="Ingreso ÷ Costo total. Colchón sobre punto de equilibrio." />
+                <MetricCard label="TIR (simplificada)" value={rView.tir} format="pct" threshold={thresholds.tirMin} highlight desc="Retorno anualizado sobre el capital. Supone aporte de capital al inicio y retorno al final del proyecto." />
+                <MetricCard label="LTV — Préstamo vs Valor del proyecto" value={rView.ltv} format="pct" threshold={thresholds.ltvMax} type="max" desc="Préstamo ÷ Ingreso total. Menor = menos riesgo para el financiador." />
+                <MetricCard label="LTC — Préstamo vs Costo total" value={rView.ltc} format="pct" threshold={thresholds.ltcMax} type="max" desc="Préstamo ÷ Costo total. Menor = más respaldado por equity." />
+                <MetricCard label="Duración total del proyecto" value={rView.mesesTotal} format="num" desc="Pre-desarrollo + construcción + post-venta, en meses." />
               </div>
             </div>
 
@@ -1667,28 +1758,28 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                   </thead>
                   <tbody>
                     {[
-                      { l: "INGRESO BRUTO TOTAL", v: r.ingresoTotal, bold: true, color: "text-emerald-700" },
-                      { l: "(-) Terreno", v: r.precioTerreno },
-                      { l: "(-) Construcción directa", v: r.costoConstruccion },
-                      { l: "(-) Costos blandos", v: r.costoSoft },
-                      { l: "(-) Comisión inmobiliaria", v: r.costoComision },
-                      { l: "(-) Publicidad y mercadeo", v: r.costoMarketing },
-                      { l: "(-) Contingencias", v: r.costoContingencias },
-                      { l: "COSTO TOTAL (antes financiamiento)", v: r.costoPreFinan, bold: true, color: "text-red-600", line: true },
-                      { l: "UTILIDAD BRUTA", v: r.ingresoTotal - r.costoPreFinan, bold: true, color: r.ingresoTotal - r.costoPreFinan >= 0 ? "text-emerald-700" : "text-red-600", line: true },
+                      { l: "INGRESO BRUTO TOTAL", v: rView.ingresoTotal, bold: true, color: "text-emerald-700" },
+                      { l: "(-) Terreno", v: rView.precioTerreno },
+                      { l: "(-) Construcción directa", v: rView.costoConstruccion },
+                      { l: "(-) Costos blandos", v: rView.costoSoft },
+                      { l: "(-) Comisión inmobiliaria", v: rView.costoComision },
+                      { l: "(-) Publicidad y mercadeo", v: rView.costoMarketing },
+                      { l: "(-) Contingencias", v: rView.costoContingencias },
+                      { l: "COSTO TOTAL (antes financiamiento)", v: rView.costoPreFinan, bold: true, color: "text-red-600", line: true },
+                      { l: "UTILIDAD BRUTA", v: rView.ingresoTotal - rView.costoPreFinan, bold: true, color: rView.ingresoTotal - rView.costoPreFinan >= 0 ? "text-emerald-700" : "text-red-600", line: true },
                       { l: "", spacer: true },
                       { l: "COSTOS FINANCIEROS", v: null, bold: true, color: "text-slate-700", header: true },
-                      { l: "(-) Intereses estimados", v: r.intereses },
-                      { l: "(-) Comisión del financiamiento", v: r.comisionBancaria },
-                      { l: "TOTAL COSTO FINANCIERO", v: r.costoFinanciero, bold: true, color: "text-red-600", line: true },
+                      { l: "(-) Intereses estimados", v: rView.intereses },
+                      { l: "(-) Comisión del financiamiento", v: rView.comisionBancaria },
+                      { l: "TOTAL COSTO FINANCIERO", v: rView.costoFinanciero, bold: true, color: "text-red-600", line: true },
                       { l: "", spacer: true },
-                      { l: "COSTO TOTAL DEL PROYECTO", v: r.costoTotal, bold: true, color: "text-red-600", line: true },
-                      { l: "UTILIDAD NETA", v: r.utilidadNeta, bold: true, color: r.utilidadNeta >= 0 ? "text-emerald-700" : "text-red-600", line: true, big: true },
+                      { l: "COSTO TOTAL DEL PROYECTO", v: rView.costoTotal, bold: true, color: "text-red-600", line: true },
+                      { l: "UTILIDAD NETA", v: rView.utilidadNeta, bold: true, color: rView.utilidadNeta >= 0 ? "text-emerald-700" : "text-red-600", line: true, big: true },
                     ].map((row, i) => {
                       if (row.spacer) return <tr key={i}><td colSpan={5} className="h-2"></td></tr>;
-                      const perUd = row.v != null && r.unidades > 0 ? row.v / r.unidades : null;
-                      const perM2 = row.v != null && r.m2Vendible > 0 ? row.v / r.m2Vendible : null;
-                      const pctIng = row.v != null && r.ingresoTotal > 0 ? row.v / r.ingresoTotal : null;
+                      const perUd = row.v != null && rView.unidades > 0 ? row.v / rView.unidades : null;
+                      const perM2 = row.v != null && rView.m2Vendible > 0 ? row.v / rView.m2Vendible : null;
+                      const pctIng = row.v != null && rView.ingresoTotal > 0 ? row.v / rView.ingresoTotal : null;
                       return (
                         <tr key={i} className={`${row.line ? "border-t border-slate-300" : ""} ${row.bold ? "font-bold" : "text-slate-600"} ${row.color || ""}`}>
                           <td className={`p-1.5 text-left ${row.header ? "pt-2" : ""}`}>{row.l}</td>
@@ -1711,26 +1802,26 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Usos — ¿En qué se necesita el dinero?</h4>
                   <div className="space-y-1.5 text-sm">
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Terreno</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.precioTerreno / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.precioTerreno)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Construcción directa</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoConstruccion / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoConstruccion)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Costos blandos</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoSoft / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoSoft)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión inmobiliaria</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoComision / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoComision)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Publicidad y mercadeo</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoMarketing / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoMarketing)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Contingencias</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.costoContingencias / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.costoContingencias)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Intereses del financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.intereses / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.intereses)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión del financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{r.costoTotal > 0 ? fmtPct(r.comisionBancaria / r.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.comisionBancaria)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL USOS</span><span className="flex gap-3 font-mono"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(r.costoTotal)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Terreno</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.precioTerreno / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.precioTerreno)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Construcción directa</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoConstruccion / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.costoConstruccion)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Costos blandos</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoSoft / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.costoSoft)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión inmobiliaria</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoComision / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.costoComision)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Publicidad y mercadeo</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoMarketing / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.costoMarketing)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Contingencias</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoContingencias / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.costoContingencias)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Intereses del financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.intereses / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.intereses)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión del financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.comisionBancaria / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.comisionBancaria)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL USOS</span><span className="flex gap-3 font-mono"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(rView.costoTotal)}</span></span></div>
                   </div>
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Fuentes — ¿De dónde sale el dinero?</h4>
-                  {(() => { const totalFuentes = r.equityTotal + r.prestamo + r.preventas; return (
+                  {(() => { const totalFuentes = rView.equityTotal + rView.prestamo + rView.preventas; return (
                   <div className="space-y-1.5 text-sm">
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio terreno</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.precioTerreno / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.precioTerreno)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio terreno</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(rView.precioTerreno / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.precioTerreno)}</span></span></div>
                     <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio capital</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(sup.equityCapital / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(sup.equityCapital)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600 border-t border-slate-200 pt-1"><span className="font-semibold">Total equity (socios)</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right font-semibold">{totalFuentes > 0 ? fmtPct(r.equityTotal / totalFuentes) : "—"}</span><span className="w-24 text-right font-semibold">{fmtUSD(r.equityTotal)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.prestamo / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.prestamo)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Preventas cobradas durante construcción</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(r.preventas / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(r.preventas)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600 border-t border-slate-200 pt-1"><span className="font-semibold">Total equity (socios)</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right font-semibold">{totalFuentes > 0 ? fmtPct(rView.equityTotal / totalFuentes) : "—"}</span><span className="w-24 text-right font-semibold">{fmtUSD(rView.equityTotal)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(rView.prestamo / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.prestamo)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Preventas cobradas durante construcción</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(rView.preventas / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.preventas)}</span></span></div>
                     <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL FUENTES</span><span className="flex gap-3 font-mono"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(totalFuentes)}</span></span></div>
                   </div>
                   ); })()}
@@ -1742,17 +1833,17 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Métricas Urbanísticas</h3>
               <div className="grid grid-cols-5 gap-3">
-                <MetricCard label="Unidades" value={r.unidades} format="num" />
-                <MetricCard label="m² Vendible" value={r.m2Vendible} format="num" />
-                <MetricCard label="Densidad (viv/ha)" value={r.densidad} format="num" />
-                <MetricCard label="m² vendible/ud" value={r.m2PorUnidad} format="num" />
-                <MetricCard label="Edificabilidad (m² vend/m² terreno)" value={r.indiceEdificabilidad} format="num" />
+                <MetricCard label="Unidades" value={rView.unidades} format="num" />
+                <MetricCard label="m² Vendible" value={rView.m2Vendible} format="num" />
+                <MetricCard label="Densidad (viv/ha)" value={rView.densidad} format="num" />
+                <MetricCard label="m² vendible/ud" value={rView.m2PorUnidad} format="num" />
+                <MetricCard label="Edificabilidad (m² vend/m² terreno)" value={rView.indiceEdificabilidad} format="num" />
               </div>
               <p className="text-xs text-slate-500 mt-2 italic">Edificabilidad — m² vendibles / m² terreno. Conecta normativa con modelo financiero. | m²/ud — Social: 50–80 | Medio: 80–120 | Premium: 120–200.</p>
             </div>
 
             {/* Parqueos */}
-            <div className={`rounded-lg border p-4 ${r.pCumple ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
+            <div className={`rounded-lg border p-4 ${rView.pCumple ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Validación Parqueos</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-1">
@@ -1761,35 +1852,36 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                 </div>
                 <div className="flex justify-between items-center border-b border-slate-200 pb-1">
                   <span className="text-slate-600">Visitantes <span className="text-slate-400 text-xs ml-1">1 cada {sup.divisorVisita} uds</span></span>
-                  <strong className="font-mono text-slate-800">− {r.pVisita}</strong>
+                  <strong className="font-mono text-slate-800">− {rView.pVisita}</strong>
                 </div>
                 <div className="flex justify-between items-center border-b border-slate-200 pb-1">
-                  <span className="text-slate-600">Discapacidad {r.pDiscapacidad > 0
+                  <span className="text-slate-600">Discapacidad {rView.pDiscapacidad > 0
                     ? <span className="text-slate-400 text-xs ml-1">1 cada {sup.divisorDiscapacidad} uds</span>
                     : <span className="text-slate-400 text-xs ml-1">No se requiere</span>}
                   </span>
-                  <strong className="font-mono text-slate-800">− {r.pDiscapacidad}</strong>
+                  <strong className="font-mono text-slate-800">− {rView.pDiscapacidad}</strong>
                 </div>
                 <div className="flex justify-between items-center border-b border-slate-200 pb-1 pt-1">
                   <span className="text-slate-700 font-semibold">Disponibles para viviendas</span>
-                  <span><strong className="font-mono">{r.pDisponibleViviendas}</strong> <span className="text-slate-400 text-xs ml-1">({r.pPorUnidad.toFixed(1)} parq/ud)</span></span>
+                  <span><strong className="font-mono">{rView.pDisponibleViviendas}</strong> <span className="text-slate-400 text-xs ml-1">({rView.pPorUnidad.toFixed(1)} parq/ud)</span></span>
                 </div>
-                {r.pExcedenteVenta > 0 && (
+                {rView.pExcedenteVenta > 0 && (
                   <div className="flex justify-between items-center border-b border-slate-200 pb-1">
                     <span className="text-slate-600">Disponibles para venta <span className="text-slate-400 text-xs ml-1">(excedente sobre 2/ud)</span></span>
-                    <strong className="font-mono text-blue-600">{r.pExcedenteVenta}</strong>
+                    <strong className="font-mono text-blue-600">{rView.pExcedenteVenta}</strong>
                   </div>
                 )}
                 <div className="flex justify-between items-center pt-1">
                   <span className="text-slate-700 font-semibold">Cumplimiento normativa</span>
-                  <span className={`font-bold ${r.pCumple ? "text-emerald-600" : "text-red-600"}`}>
-                    {r.pRequeridos} requeridos — {r.pCumple ? "CUMPLE" : "DÉFICIT"}
+                  <span className={`font-bold ${rView.pCumple ? "text-emerald-600" : "text-red-600"}`}>
+                    {rView.pRequeridos} requeridos — {rView.pCumple ? "CUMPLE" : "DÉFICIT"}
                   </span>
                 </div>
               </div>
             </div>
           <PrintDisclaimer />
           </div>
+          )}
         </div>
 
         {/* ═══ TAB: SENSIBILIDAD ═══ */}

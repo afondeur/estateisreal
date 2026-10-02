@@ -9,31 +9,34 @@ export default function PricingPage() {
   const { user, tier, trackEvent } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [interestSent, setInterestSent] = useState(false);
+  const [interestSent, setInterestSent] = useState(null); // key del plan anotado
 
   const isFree = !user || tier === "free";
   const isPro = tier === "pro";
 
   // Cobro en línea pendiente de definir (2026-10): en vez de abrir el checkout,
   // se registra el interés del usuario (evento "interes_pro") para avisarle después.
-  const handleInterest = async () => {
+  const handleInterest = async (planKey) => {
     if (!user) {
       router.push("/registro?redirect=/pricing");
       return;
     }
-    setLoading(true);
-    await trackEvent("interes_pro", { source: "pricing" });
+    setLoading(planKey);
+    await trackEvent("interes_pro", { source: "pricing", plan: planKey });
     setLoading(false);
-    setInterestSent(true);
+    setInterestSent(planKey);
   };
 
+  // Precios aprobados por Alejandro el 2026-10-02
   const plans = [
     {
+      key: "free",
       name: "Gratuito",
       price: "$0",
       period: "para siempre",
       desc: "Ideal para evaluar la herramienta",
       features: [
+        "5 análisis completos al mes",
         "Métricas financieras completas",
         "Semáforo VIABLE / NO VIABLE",
         "Estructura de capital",
@@ -45,21 +48,41 @@ export default function PricingPage() {
       current: user && isFree,
     },
     {
+      key: "pase7",
+      name: "Pase 7 días",
+      price: "$5",
+      period: "pago único",
+      desc: "Para evaluar un proyecto puntual",
+      features: [
+        "Todo lo de Pro durante 7 días",
+        "Análisis ilimitados con resultados en vivo",
+        "Sensibilidad y escenarios",
+        "PDF profesional sin marca",
+        "Sin renovación automática",
+      ],
+      cta: loading === "pase7" ? "Procesando..." : "Quiero el pase — avísame",
+      ctaAction: () => handleInterest("pase7"),
+      note: "Pago en línea: próximamente",
+      highlighted: false,
+      current: false,
+    },
+    {
+      key: "pro",
       name: "Pro",
-      price: "$25",
+      price: "$10",
       period: "/mes",
+      yearlyPrice: "o $99/año (2 meses gratis)",
       desc: "Para desarrolladores profesionales",
       features: [
-        "Todo lo del plan Gratuito",
+        "Análisis ilimitados con resultados en vivo",
         "Tablas de sensibilidad (7 variables)",
         "5 escenarios de mercado",
         "Punto de equilibrio detallado",
-        "Análisis ilimitados",
         "PDF profesional sin marca",
         "Soporte prioritario",
       ],
-      cta: isPro ? "Tu plan actual" : loading ? "Procesando..." : "Quiero Pro — avísame",
-      ctaAction: handleInterest,
+      cta: isPro ? "Tu plan actual" : loading === "pro" ? "Procesando..." : "Quiero Pro — avísame",
+      ctaAction: () => handleInterest("pro"),
       note: "Pago en línea: próximamente",
       highlighted: true,
       current: isPro,
@@ -70,7 +93,7 @@ export default function PricingPage() {
     <>
       <Navbar />
       <div className="min-h-screen bg-slate-800 py-16 px-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12">
             <h1 className="text-3xl font-bold text-white mb-3">
@@ -89,7 +112,7 @@ export default function PricingPage() {
           )}
 
           {/* Cards */}
-          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {plans.map((plan) => (
               <div
                 key={plan.name}
@@ -144,13 +167,13 @@ export default function PricingPage() {
                   >
                     {plan.cta}
                   </Link>
-                ) : plan.ctaAction && interestSent ? (
+                ) : plan.ctaAction && interestSent === plan.key ? (
                   <div className="w-full text-center py-3 px-2 font-medium rounded-xl text-sm bg-emerald-50 text-emerald-700">
-                    ¡Anotado! Te avisaremos a {user?.email} cuando el plan Pro esté disponible.
+                    ¡Anotado! Te avisaremos a {user?.email} cuando el pago en línea esté disponible.
                   </div>
                 ) : (
                   <button
-                    disabled={loading && plan.highlighted}
+                    disabled={loading === plan.key}
                     className={`w-full py-3 rounded-xl font-bold transition text-sm ${
                       plan.highlighted
                         ? "bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 disabled:cursor-wait"

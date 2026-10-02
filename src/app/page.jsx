@@ -90,7 +90,7 @@ export default function Home() {
 
           {!user && (
             <p className="text-sm text-slate-500 mt-4">
-              Prueba gratis sin registrarte. Crea una cuenta para guardar tus análisis.
+              Regístrate gratis y obtén 5 análisis completos al mes. Guarda y comparte tus proyectos.
             </p>
           )}
 
