@@ -6,36 +6,25 @@ import Navbar from "../../components/Navbar";
 import { useAuth } from "../../context/AuthContext";
 
 export default function PricingPage() {
-  const { user, tier } = useAuth();
+  const { user, tier, trackEvent } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [interestSent, setInterestSent] = useState(false);
 
   const isFree = !user || tier === "free";
   const isPro = tier === "pro";
 
-  const handleCheckout = async () => {
+  // Cobro en línea pendiente de definir (2026-10): en vez de abrir el checkout,
+  // se registra el interés del usuario (evento "interes_pro") para avisarle después.
+  const handleInterest = async () => {
     if (!user) {
-      router.push("/registro");
+      router.push("/registro?redirect=/pricing");
       return;
     }
     setLoading(true);
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert(data.error || "Error al iniciar el pago. Intenta de nuevo.");
-        setLoading(false);
-      }
-    } catch (err) {
-      alert("Error de conexión. Intenta de nuevo.");
-      setLoading(false);
-    }
+    await trackEvent("interes_pro", { source: "pricing" });
+    setLoading(false);
+    setInterestSent(true);
   };
 
   const plans = [
@@ -70,8 +59,9 @@ export default function PricingPage() {
         "PDF profesional sin marca",
         "Soporte prioritario",
       ],
-      cta: isPro ? "Tu plan actual" : loading ? "Procesando..." : "Empezar Pro",
-      ctaAction: handleCheckout,
+      cta: isPro ? "Tu plan actual" : loading ? "Procesando..." : "Quiero Pro — avísame",
+      ctaAction: handleInterest,
+      note: "Pago en línea: próximamente",
       highlighted: true,
       current: isPro,
     },
@@ -155,6 +145,10 @@ export default function PricingPage() {
                   >
                     {plan.cta}
                   </Link>
+                ) : plan.ctaAction && interestSent ? (
+                  <div className="w-full text-center py-3 px-2 font-medium rounded-xl text-sm bg-emerald-50 text-emerald-700">
+                    ¡Anotado! Te avisaremos a {user?.email} cuando el plan Pro esté disponible.
+                  </div>
                 ) : (
                   <button
                     disabled={loading && plan.highlighted}
@@ -167,6 +161,9 @@ export default function PricingPage() {
                   >
                     {plan.cta}
                   </button>
+                )}
+                {plan.note && !plan.current && (
+                  <p className="text-xs text-slate-500 text-center mt-2">{plan.note}</p>
                 )}
               </div>
             ))}
