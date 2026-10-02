@@ -3,6 +3,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
+import { safeRedirect } from "../../lib/safe-redirect";
 
 function RegistroForm() {
   const [name, setName] = useState("");
@@ -35,7 +36,7 @@ function RegistroForm() {
     }
     // Si el usuario ya tiene sesión activa (email confirm desactivado), ir al redirect o home
     if (data?.session) {
-      router.push(redirect?.startsWith("/") ? redirect : "/");
+      router.push(safeRedirect(redirect));
       return;
     }
     // Si necesita confirmar email, mostrar pantalla de éxito

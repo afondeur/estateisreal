@@ -3,6 +3,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
+import { safeRedirect } from "../../lib/safe-redirect";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -37,7 +38,7 @@ function LoginForm() {
       }
       return;
     }
-    router.push(redirect?.startsWith("/") ? redirect : "/");
+    router.push(safeRedirect(redirect));
   };
 
   const handleGoogle = async () => {
