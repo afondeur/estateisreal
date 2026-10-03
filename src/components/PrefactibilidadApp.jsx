@@ -329,7 +329,7 @@ function InputField({ label, value, onChange, type = "number", step, suffix, pre
 }
 
 // Dropdown categórico. Reutiliza el look de InputField para consistencia visual.
-function SelectField({ label, value, onChange, options, required, placeholder = "Seleccionar..." }) {
+function SelectField({ label, value, onChange, options, required, placeholder = "Seleccionar...", noPlaceholder = false }) {
   const isEmpty = required && (!value || value === "");
   return (
     <div className="flex flex-col gap-1">
@@ -341,7 +341,7 @@ function SelectField({ label, value, onChange, options, required, placeholder = 
         onChange={e => onChange(e.target.value)}
         className={`w-full px-2 py-1.5 rounded text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
       >
-        <option value="">{placeholder}</option>
+        {!noPlaceholder && <option value="">{placeholder}</option>}
         {options.map(opt => typeof opt === "string"
           ? <option key={opt} value={opt}>{opt}</option>
           : <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -1493,7 +1493,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                   value={sup.moneda}
                   onChange={v => updateSup("moneda", v || "USD")}
                   options={MONEDAS}
-                  placeholder="US$ — Dólar"
+                  noPlaceholder
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
