@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/Navbar";
+import DecisionPanel from "./DecisionPanel";
 import { supabase } from "../../lib/supabase";
 
 // ═══════════════════════════════════════════════
@@ -93,14 +94,18 @@ function StatCard({ label, value, sublabel, color = "text-slate-100" }) {
 }
 
 function Section({ title, subtitle, children }) {
+  // Secciones de detalle: plegadas por defecto; lo esencial está en el panel de decisión
   return (
-    <section className="bg-slate-700 rounded-2xl border border-slate-600 p-6">
-      <div className="mb-4">
-        <h2 className="text-lg font-bold text-slate-100">{title}</h2>
-        {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
-      </div>
-      {children}
-    </section>
+    <details className="group bg-slate-700 rounded-2xl border border-slate-600 p-6">
+      <summary className="cursor-pointer list-none flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-slate-100">{title}</h2>
+          {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+        </div>
+        <span className="text-slate-400 text-sm group-open:rotate-180 transition">▾</span>
+      </summary>
+      <div className="mt-4">{children}</div>
+    </details>
   );
 }
 
@@ -118,6 +123,7 @@ export default function AdminPage() {
   const [analytics, setAnalytics] = useState([]);
   const [proyectos, setProyectos] = useState([]);
   const [marketData, setMarketData] = useState([]);
+  const [allEvents, setAllEvents] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -130,15 +136,17 @@ export default function AdminPage() {
       setError("");
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       try {
-        const [promoRes, redRes, fbRes, surveyRes, profilesRes, analyticsRes, proyectosRes, marketRes] = await Promise.all([
+        const [promoRes, redRes, fbRes, surveyRes, profilesRes, analyticsRes, proyectosRes, marketRes, allEventsRes] = await Promise.all([
           supabase.from("promo_codes").select("*").order("created_at", { ascending: false }),
           supabase.from("promo_redemptions").select("*").order("redeemed_at", { ascending: false }),
           supabase.from("feedback").select("*").order("created_at", { ascending: false }).limit(500),
           supabase.from("pricing_survey").select("*").order("created_at", { ascending: false }).limit(500),
-          supabase.from("profiles").select("id, email, tier, is_admin, pro_until, pro_source, created_at"),
+          supabase.from("profiles").select("id, email, nombre, rol, origen, tier, is_admin, pro_until, pro_source, stripe_subscription_id, created_at"),
           supabase.from("analytics_events").select("event_type, user_id, created_at").gte("created_at", thirtyDaysAgo).limit(5000),
           supabase.from("proyectos").select("id, user_id, created_at"),
-          supabase.from("market_intelligence").select("*").order("created_at", { ascending: false }).limit(2000),
+          supabase.from("market_intelligence").select("*").order("created_at", { ascending: false }).limit(5000),
+          // Historial completo (solo columnas mínimas) para embudo, cohortes y prospectos
+          supabase.from("analytics_events").select("event_type, user_id, created_at").order("created_at", { ascending: true }).limit(50000),
         ]);
         if (promoRes.error) throw promoRes.error;
         if (redRes.error) throw redRes.error;
@@ -148,6 +156,7 @@ export default function AdminPage() {
         if (analyticsRes.error) throw analyticsRes.error;
         if (proyectosRes.error) throw proyectosRes.error;
         if (marketRes.error) throw marketRes.error;
+        if (allEventsRes.error) throw allEventsRes.error;
         setPromoStats(promoRes.data || []);
         setRedemptions(redRes.data || []);
         setFeedback(fbRes.data || []);
@@ -156,6 +165,7 @@ export default function AdminPage() {
         setAnalytics(analyticsRes.data || []);
         setProyectos(proyectosRes.data || []);
         setMarketData(marketRes.data || []);
+        setAllEvents(allEventsRes.data || []);
       } catch (e) {
         console.error("admin fetch error:", e);
         setError(e.message || "Error cargando datos");
@@ -450,8 +460,14 @@ export default function AdminPage() {
         <div className="max-w-6xl mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-100">Panel Admin</h1>
-            <p className="text-sm text-slate-400">Resumen del negocio, campaña TUR2026 y feedback.</p>
+            <p className="text-sm text-slate-400">¿Vamos hacia 10 pagos al 31 de enero de 2027, y a quién contactamos esta semana?</p>
           </div>
+
+          {!dataLoading && !error && (
+            <DecisionPanel profiles={profiles} events={allEvents} market={marketData} />
+          )}
+
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide pt-4">Detalle (plegado)</h2>
 
           {error && (
             <div className="bg-red-900/30 border border-red-700 rounded-xl p-4">
