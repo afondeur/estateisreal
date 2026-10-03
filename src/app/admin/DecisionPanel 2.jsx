@@ -20,8 +20,7 @@ const ORIGEN_LABEL = {
   google: "Google", evento: "Evento", otro: "Otro",
 };
 
-// is_internal: marca en la base para cuentas propias o de prueba (familia, QA)
-const isInternal = (p) => p.is_internal || p.is_admin || INTERNAL_DOMAINS.some(d => (p.email || "").toLowerCase().endsWith("@" + d));
+const isInternal = (p) => p.is_admin || INTERNAL_DOMAINS.some(d => (p.email || "").toLowerCase().endsWith("@" + d));
 const monthKey = (d) => d.slice(0, 7);
 const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
 const fmtN = (n) => (n == null ? "—" : Math.round(n).toLocaleString("en-US"));
