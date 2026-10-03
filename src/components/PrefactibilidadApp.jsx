@@ -38,6 +38,8 @@ const DEFAULT_ESCENARIOS = [
 const DEFAULT_SUPUESTOS = {
   proyecto: "", ubicacion: "", fecha: "",
   ciudad: "", sector: "", sistemaConstructivo: "", tipoProyecto: "",
+  moneda: "USD",
+  uid: "", // id anónimo del proyecto para benchmarks (no es el id de la base de datos)
   areaTerreno: 0, precioTerreno: 0,
   costoM2: 0, softCosts: 0, comisionVenta: 0, marketing: 0, contingencias: 0,
   tasaInteres: 0, drawFactor: 0, comisionBanco: 0,
@@ -46,6 +48,16 @@ const DEFAULT_SUPUESTOS = {
   equityCapital: 0,
   parqueosDisenados: 0, ratioResidente: 2, divisorVisita: 10, divisorDiscapacidad: 50,
 };
+
+// Moneda en que el usuario ingresa montos. Los cálculos (ROI, margen, TIR) no
+// dependen de ella; solo cambia el símbolo y la normalización de benchmarks.
+const MONEDAS = [
+  { value: "USD", label: "US$ — Dólar", sym: "US$" },
+  { value: "DOP", label: "RD$ — Peso dominicano", sym: "RD$" },
+];
+
+// Proyectos guardados antes de existir el campo: un costo ≥ 3,000/m² solo es plausible en pesos
+const inferMoneda = (s) => s?.moneda || ((Number(s?.costoM2) || 0) >= 3000 ? "DOP" : "USD");
 
 const CIUDADES = [
   "Santo Domingo", "Santiago", "Puerto Plata", "La Romana",
@@ -330,9 +342,10 @@ function SelectField({ label, value, onChange, options, required, placeholder = 
         className={`w-full px-2 py-1.5 rounded text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 ${isEmpty ? "bg-red-50 border-2 border-red-400" : "bg-blue-50 border border-blue-200"}`}
       >
         <option value="">{placeholder}</option>
-        {options.map(opt => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
+        {options.map(opt => typeof opt === "string"
+          ? <option key={opt} value={opt}>{opt}</option>
+          : <option key={opt.value} value={opt.value}>{opt.label}</option>
+        )}
       </select>
     </div>
   );
@@ -789,7 +802,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       setTimeout(() => setProjectMsg(""), 3000);
       return;
     }
-    setSup({ ...DEFAULT_SUPUESTOS, ...data.supuestos });
+    setSup({ ...DEFAULT_SUPUESTOS, ...data.supuestos, moneda: inferMoneda(data.supuestos) });
     setMix(data.mix?.length ? data.mix : DEFAULT_MIX);
     setThresholds({ ...DEFAULT_THRESHOLDS, ...data.thresholds });
     setSnapshot(null);
@@ -900,13 +913,35 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       return;
     }
 
-    // El servidor verifica el límite y registra el análisis en un solo paso
+    // Id anónimo y estable del proyecto (se guarda con el proyecto) para que los
+    // benchmarks cuenten proyectos y no cada ajuste como uno nuevo.
+    const supUsed = sup.uid ? sup : { ...sup, uid: crypto.randomUUID() };
+    if (supUsed !== sup) setSup(supUsed);
+    const res0 = calcAll(supUsed, mix, thresholds);
+    const snapshotMercado = {
+      ciudad: supUsed.ciudad, sector: supUsed.ubicacion,
+      sistema_constructivo: supUsed.sistemaConstructivo, tipo_proyecto: supUsed.tipoProyecto,
+      moneda: supUsed.moneda || "USD", proyecto_uid: supUsed.uid,
+      area_terreno: supUsed.areaTerreno, precio_terreno: supUsed.precioTerreno,
+      precio_terreno_m2: supUsed.areaTerreno > 0 ? supUsed.precioTerreno / supUsed.areaTerreno : null,
+      costo_construccion_m2: supUsed.costoM2, area_construida: res0.m2Vendible,
+      precio_venta_m2_promedio: res0.precioPromM2, ingresos_totales: res0.ingresoTotal,
+      unidades_total: res0.unidades, meses_predev: supUsed.mesesPredev,
+      meses_construccion: supUsed.mesesConstruccion, meses_postventa: supUsed.mesesPostVenta,
+      tasa_interes: supUsed.tasaInteres, draw_factor: supUsed.drawFactor,
+      preventa_pct: supUsed.preventaPct, cobro_pct: supUsed.cobroPct,
+      soft_costs_pct: supUsed.softCosts, comision_venta_pct: supUsed.comisionVenta,
+      marketing_pct: supUsed.marketing, contingencias_pct: supUsed.contingencias,
+      margen_pct: res0.margen, roi_pct: res0.roi, tir_pct: res0.tir,
+    };
+
+    // El servidor verifica el límite, registra el análisis y guarda el snapshot anónimo
     setGenerating(true);
     try {
       const res = await fetch("/api/register-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ proyecto: sup.proyecto }),
+        body: JSON.stringify({ proyecto: sup.proyecto, snapshot: snapshotMercado }),
       });
       const usage = await res.json().catch(() => ({}));
       if (!usage.allowed) {
@@ -934,47 +969,10 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       setGenerating(false);
     }
 
-    setSnapshot({ sup, mix });
+    setSnapshot({ sup: supUsed, mix });
     setValidationErrors([]);
     setTab("resultados");
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
-
-    // Snapshot anónimo para inteligencia de mercado (no bloquea el flujo)
-    if (supabase) {
-      try {
-        const res = calcAll(sup, mix, thresholds);
-        await supabase.from("market_intelligence").insert({
-          ciudad: sup.ciudad || null,
-          sector: sup.ubicacion || null,
-          sistema_constructivo: sup.sistemaConstructivo || null,
-          tipo_proyecto: sup.tipoProyecto || null,
-          area_terreno: sup.areaTerreno || null,
-          precio_terreno: sup.precioTerreno || null,
-          precio_terreno_m2: sup.areaTerreno > 0 ? sup.precioTerreno / sup.areaTerreno : null,
-          costo_construccion_m2: sup.costoM2 || null,
-          area_construida: res.m2Vendible || null,
-          precio_venta_m2_promedio: res.precioPromM2 || null,
-          ingresos_totales: res.ingresoTotal || null,
-          unidades_total: res.unidades || null,
-          meses_predev: sup.mesesPredev || null,
-          meses_construccion: sup.mesesConstruccion || null,
-          meses_postventa: sup.mesesPostVenta || null,
-          tasa_interes: sup.tasaInteres || null,
-          draw_factor: sup.drawFactor || null,
-          preventa_pct: sup.preventaPct || null,
-          cobro_pct: sup.cobroPct || null,
-          soft_costs_pct: sup.softCosts || null,
-          comision_venta_pct: sup.comisionVenta || null,
-          marketing_pct: sup.marketing || null,
-          contingencias_pct: sup.contingencias || null,
-          margen_pct: res.margen ?? null,
-          roi_pct: res.roi ?? null,
-          tir_pct: res.tir ?? null,
-        });
-      } catch (e) {
-        console.log("market_intelligence snapshot error:", e);
-      }
-    }
 
     // Gate duro (Pro promo, ≥3 análisis) prevalece sobre soft (cualquier user, ≥2)
     if (await shouldShowGate("analisis")) {
@@ -1038,6 +1036,8 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
   }, [trackEvent, sup.proyecto]);
 
   const r = useMemo(() => calcAll(sup, mix, thresholds), [sup, mix, thresholds]);
+  const currencySym = (MONEDAS.find(m => m.value === sup.moneda) || MONEDAS[0]).sym;
+  const money = useCallback(n => (n == null || isNaN(n) ? "—" : currencySym + fmt(n)), [currencySym]);
 
   // Resultados visibles: en vivo para Pro/admin; congelados en el último "Generar"
   // para free y anónimos (los umbrales sí se aplican en vivo). null = aún sin generar.
@@ -1341,9 +1341,9 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
       <div className="no-print bg-slate-900 border-b border-slate-700 px-4 py-2">
         <div className="max-w-5xl mx-auto flex gap-6 text-xs overflow-x-auto">
           {[
-            { l: "Ingreso Total", v: fmtUSD(rView?.ingresoTotal) },
-            { l: "Costo Total", v: fmtUSD(rView?.costoTotal) },
-            { l: "Utilidad Neta", v: fmtUSD(rView?.utilidadNeta) },
+            { l: "Ingreso Total", v: money(rView?.ingresoTotal) },
+            { l: "Costo Total", v: money(rView?.costoTotal) },
+            { l: "Utilidad Neta", v: money(rView?.utilidadNeta) },
             { l: "ROI", v: fmtPct(rView?.roi) },
             { l: "Margen", v: fmtPct(rView?.margen) },
             { l: "MOIC", v: rView ? rView.moic?.toFixed(2) + "x" : "—" },
@@ -1478,7 +1478,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
             {/* Proyecto */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Proyecto</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <InputField label="Nombre" value={sup.proyecto} onChange={v => updateSup("proyecto", v)} type="text" required />
                 <InputField label="Fecha" value={sup.fecha} onChange={v => updateSup("fecha", v)} type="date" required />
                 <SelectField
@@ -1487,6 +1487,13 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                   onChange={v => updateSup("ciudad", v)}
                   options={CIUDADES}
                   required
+                />
+                <SelectField
+                  label="Moneda de los montos"
+                  value={sup.moneda}
+                  onChange={v => updateSup("moneda", v || "USD")}
+                  options={MONEDAS}
+                  placeholder="US$ — Dólar"
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
@@ -1543,16 +1550,16 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                         <td className="p-1"><input type="number" className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-800" value={u.m2 === 0 ? "" : u.m2} onChange={e => updateMix(i, "m2", parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()} placeholder="0" min={0} /></td>
                         <td className="p-1"><InlineMoney value={u.precioUd} onChange={v => updateMix(i, "precioUd", v)} /></td>
                         <td className="p-1">{u.m2 > 0 ? <InlineMoney value={Math.round(u.precioUd / u.m2)} onChange={v => updateMix(i, "precioUd", v * u.m2)} /> : <div className="w-full px-1 py-0.5 text-center text-sm bg-blue-50 border border-blue-200 rounded font-mono text-slate-400">—</div>}</td>
-                        <td className="p-2 text-right font-mono font-medium text-xs">{fmtUSD(u.qty * u.precioUd)}</td>
+                        <td className="p-2 text-right font-mono font-medium text-xs">{money(u.qty * u.precioUd)}</td>
                       </tr>
                     ))}
                     <tr className="border-t-2 border-slate-300 font-bold text-xs">
                       <td className="p-2">TOTAL</td>
                       <td className="p-2 text-center">{r.unidades}</td>
                       <td className="p-2 text-center">{r.unidades > 0 ? fmt(r.m2Vendible / r.unidades, 1) : "—"}</td>
-                      <td className="p-2 text-center">{fmtUSD(r.precioPromUd)}</td>
-                      <td className="p-2 text-right">{fmtUSD(r.precioPromM2)}</td>
-                      <td className="p-2 text-right text-emerald-700">{fmtUSD(r.ingresoTotal)}</td>
+                      <td className="p-2 text-center">{money(r.precioPromUd)}</td>
+                      <td className="p-2 text-right">{money(r.precioPromM2)}</td>
+                      <td className="p-2 text-right text-emerald-700">{money(r.ingresoTotal)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1609,7 +1616,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Aporte del socio que pone el terreno</label>
                   <div className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded text-sm font-mono text-slate-700">
-                    {fmtUSD(r.precioTerreno)}
+                    {money(r.precioTerreno)}
                   </div>
                   <span className="text-xs text-slate-400">Equivale al valor del terreno</span>
                 </div>
@@ -1617,7 +1624,7 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total inversión de los socios</label>
                   <div className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded text-sm font-mono font-bold text-slate-700">
-                    {fmtUSD(r.equityTotal)}
+                    {money(r.equityTotal)}
                   </div>
                   <span className="text-xs text-slate-400">Terreno + capital en efectivo</span>
                 </div>
@@ -1783,8 +1790,8 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                       return (
                         <tr key={i} className={`${row.line ? "border-t border-slate-300" : ""} ${row.bold ? "font-bold" : "text-slate-600"} ${row.color || ""}`}>
                           <td className={`p-1.5 text-left ${row.header ? "pt-2" : ""}`}>{row.l}</td>
-                          <td className="p-1.5 text-right font-mono">{row.v != null ? fmtUSD(row.v) : ""}</td>
-                          <td className="p-1.5 text-right font-mono">{perUd != null && !row.header ? fmtUSD(perUd) : ""}</td>
+                          <td className="p-1.5 text-right font-mono">{row.v != null ? money(row.v) : ""}</td>
+                          <td className="p-1.5 text-right font-mono">{perUd != null && !row.header ? money(perUd) : ""}</td>
                           <td className="p-1.5 text-right font-mono">{perM2 != null && !row.header ? fmt(perM2, 0) : ""}</td>
                           <td className="p-1.5 text-right font-mono">{pctIng != null && !row.header ? fmtPct(pctIng) : ""}</td>
                         </tr>
@@ -1802,27 +1809,27 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Usos — ¿En qué se necesita el dinero?</h4>
                   <div className="space-y-1.5 text-sm">
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Terreno</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.precioTerreno / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.precioTerreno)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Construcción directa</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoConstruccion / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.costoConstruccion)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Costos blandos</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoSoft / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.costoSoft)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión inmobiliaria</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoComision / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.costoComision)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Publicidad y mercadeo</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoMarketing / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.costoMarketing)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Contingencias</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoContingencias / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.costoContingencias)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Intereses del financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.intereses / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.intereses)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión del financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.comisionBancaria / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.comisionBancaria)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL USOS</span><span className="flex gap-3 font-mono"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(rView.costoTotal)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Terreno</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.precioTerreno / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{money(rView.precioTerreno)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Construcción directa</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoConstruccion / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{money(rView.costoConstruccion)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Costos blandos</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoSoft / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{money(rView.costoSoft)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión inmobiliaria</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoComision / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{money(rView.costoComision)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Publicidad y mercadeo</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoMarketing / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{money(rView.costoMarketing)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Contingencias</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.costoContingencias / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{money(rView.costoContingencias)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Intereses del financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.intereses / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{money(rView.intereses)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Comisión del financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{rView.costoTotal > 0 ? fmtPct(rView.comisionBancaria / rView.costoTotal) : "—"}</span><span className="w-24 text-right">{money(rView.comisionBancaria)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL USOS</span><span className="flex gap-3 font-mono"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{money(rView.costoTotal)}</span></span></div>
                   </div>
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Fuentes — ¿De dónde sale el dinero?</h4>
                   {(() => { const totalFuentes = rView.equityTotal + rView.prestamo + rView.preventas; return (
                   <div className="space-y-1.5 text-sm">
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio terreno</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(rView.precioTerreno / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.precioTerreno)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio capital</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(sup.equityCapital / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(sup.equityCapital)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600 border-t border-slate-200 pt-1"><span className="font-semibold">Total equity (socios)</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right font-semibold">{totalFuentes > 0 ? fmtPct(rView.equityTotal / totalFuentes) : "—"}</span><span className="w-24 text-right font-semibold">{fmtUSD(rView.equityTotal)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(rView.prestamo / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.prestamo)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Preventas cobradas durante construcción</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(rView.preventas / totalFuentes) : "—"}</span><span className="w-24 text-right">{fmtUSD(rView.preventas)}</span></span></div>
-                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL FUENTES</span><span className="flex gap-3 font-mono"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{fmtUSD(totalFuentes)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio terreno</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(rView.precioTerreno / totalFuentes) : "—"}</span><span className="w-24 text-right">{money(rView.precioTerreno)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Aporte socio capital</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(sup.equityCapital / totalFuentes) : "—"}</span><span className="w-24 text-right">{money(sup.equityCapital)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600 border-t border-slate-200 pt-1"><span className="font-semibold">Total equity (socios)</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right font-semibold">{totalFuentes > 0 ? fmtPct(rView.equityTotal / totalFuentes) : "—"}</span><span className="w-24 text-right font-semibold">{money(rView.equityTotal)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Financiamiento</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(rView.prestamo / totalFuentes) : "—"}</span><span className="w-24 text-right">{money(rView.prestamo)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1 text-slate-600"><span>Preventas cobradas durante construcción</span><span className="flex gap-3 font-mono"><span className="text-slate-500 text-xs w-12 text-right">{totalFuentes > 0 ? fmtPct(rView.preventas / totalFuentes) : "—"}</span><span className="w-24 text-right">{money(rView.preventas)}</span></span></div>
+                    <div className="flex justify-between px-2 py-1.5 border-t border-slate-300 font-bold text-slate-800 mt-1 pt-1"><span>TOTAL FUENTES</span><span className="flex gap-3 font-mono"><span className="text-xs w-12 text-right">100%</span><span className="w-24 text-right">{money(totalFuentes)}</span></span></div>
                   </div>
                   ); })()}
                 </div>
@@ -2079,10 +2086,10 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                       const normalCell = (good, marginal) => good ? "bg-emerald-200 text-emerald-800" : marginal ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800";
                       return (
                         <tr key={i} className={isBase && !allGreen ? "bg-blue-50 font-bold" : ""}>
-                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{fmtUSD(row.capital)}{allGreen ? " ✓" : ""}</td>
-                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{fmtUSD(row.equityTotal)}</td>
-                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{fmtUSD(row.preventas)}</td>
-                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{fmtUSD(row.prestamo)}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{money(row.capital)}{allGreen ? " ✓" : ""}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{money(row.equityTotal)}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{money(row.preventas)}</td>
+                          <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : isBase ? "font-bold" : ""}`}>{money(row.prestamo)}</td>
                           <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : normalCell(row.ltv <= thresholds.ltvMax, row.ltv <= thresholds.ltvMax * 1.15)}`}>{fmtPct(row.ltv)}</td>
                           <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : normalCell(row.ltc <= thresholds.ltcMax, row.ltc <= thresholds.ltcMax * 1.15)}`}>{fmtPct(row.ltc)}</td>
                           <td className={`p-1.5 text-center font-mono ${allGreen ? optCell : normalCell(row.cobertura >= 0.25, row.cobertura >= 0.15)}`}>{fmtPct(row.cobertura)}</td>
@@ -2204,9 +2211,9 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                               </>
                             )}
                           </td>
-                          <td className="p-2 text-center font-mono text-slate-700">{fmtUSD(e.ingresoTotal)}</td>
-                          <td className="p-2 text-center font-mono text-slate-700">{fmtUSD(e.costoPreFinan)}</td>
-                          <td className={`p-2 text-center font-mono font-bold ${e.utilidadNeta >= 0 ? "text-emerald-700" : "text-red-700"}`}>{fmtUSD(e.utilidadNeta)}</td>
+                          <td className="p-2 text-center font-mono text-slate-700">{money(e.ingresoTotal)}</td>
+                          <td className="p-2 text-center font-mono text-slate-700">{money(e.costoPreFinan)}</td>
+                          <td className={`p-2 text-center font-mono font-bold ${e.utilidadNeta >= 0 ? "text-emerald-700" : "text-red-700"}`}>{money(e.utilidadNeta)}</td>
                           <td className={`p-2 text-center font-mono ${e.margen >= thresholds.margenMin ? "bg-emerald-200 text-emerald-800" : e.margen >= thresholds.margenMin * 0.75 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(e.margen)}</td>
                           <td className={`p-2 text-center font-mono ${e.roi >= thresholds.roiMin ? "bg-emerald-200 text-emerald-800" : e.roi >= thresholds.roiMin * 0.75 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{fmtPct(e.roi)}</td>
                           <td className={`p-2 text-center font-mono ${e.moic >= thresholds.moicMin ? "bg-emerald-200 text-emerald-800" : e.moic >= thresholds.moicMin * 0.85 ? "bg-amber-200 text-amber-800" : "bg-red-200 text-red-800"}`}>{e.moic.toFixed(2)}x</td>
@@ -2232,9 +2239,9 @@ export default function PrefactibilidadApp({ initialShowProjects = false }) {
                 <div className="rounded-lg border border-slate-200 p-4 text-center">
                   <div className="text-xs text-slate-500 uppercase mb-1">Precio mínimo de venta por m²</div>
                   <div className="text-xs text-slate-400 mb-1">Para lograr al menos 15% de margen</div>
-                  <div className="text-2xl font-bold text-slate-800">{fmtUSD(breakEven.minPrecioM2_15)}/m²</div>
+                  <div className="text-2xl font-bold text-slate-800">{money(breakEven.minPrecioM2_15)}/m²</div>
                   <div className={`text-xs mt-1 font-medium ${r.precioPromM2 >= breakEven.minPrecioM2_15 ? "text-emerald-600" : "text-red-600"}`}>
-                    Tu precio actual: {fmtUSD(r.precioPromM2)}/m² — {r.precioPromM2 >= breakEven.minPrecioM2_15 ? "SUFICIENTE" : "INSUFICIENTE"}
+                    Tu precio actual: {money(r.precioPromM2)}/m² — {r.precioPromM2 >= breakEven.minPrecioM2_15 ? "SUFICIENTE" : "INSUFICIENTE"}
                   </div>
                 </div>
                 <div className="rounded-lg border border-slate-200 p-4 text-center">
