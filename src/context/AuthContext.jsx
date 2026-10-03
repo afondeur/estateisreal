@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { captureUtm, getUtm, takePendingProfile } from "../lib/signup-info";
 
 const AuthContext = createContext(null);
 
@@ -17,10 +18,22 @@ export function AuthProvider({ children }) {
       .eq("id", userId)
       .single();
     if (data) setProfile(data);
+    // Registro con Google: aplicar rol/origen elegidos antes de salir a Google
+    if (data && !data.rol && !data.origen) {
+      const pending = takePendingProfile();
+      if (pending) {
+        const patch = { rol: pending.rol || null, origen: pending.origen || null };
+        if (!data.utm) patch.utm = getUtm();
+        const { data: updated } = await supabase.from("profiles").update(patch).eq("id", userId).select().single();
+        if (updated) setProfile(updated);
+        return updated || data;
+      }
+    }
     return data;
   }
 
   useEffect(() => {
+    captureUtm();
     if (!supabase) {
       setLoading(false);
       return;
@@ -52,9 +65,15 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Registro con email + password + nombre
-  const signUp = useCallback(async (email, password, nombre, empresa) => {
+  const signUp = useCallback(async (email, password, nombre, empresa, extra = {}) => {
     if (!supabase) return { error: { message: "Servicio no disponible" } };
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    // Los datos viajan como metadata y el trigger handle_new_user los copia al perfil,
+    // así se guardan aunque la cuenta requiera confirmar el correo.
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { nombre, empresa, rol: extra.rol || null, origen: extra.origen || null, utm: getUtm() } },
+    });
     if (error) return { error };
     // H5: Update profile with retry + backoff (wait for trigger to create the profile)
     if (data.user) {

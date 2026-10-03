@@ -4,10 +4,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
 import { safeRedirect } from "../../lib/safe-redirect";
+import { ROLES, ORIGENES, savePendingProfile } from "../../lib/signup-info";
 
 function RegistroForm() {
   const [name, setName] = useState("");
   const [empresa, setEmpresa] = useState("");
+  const [rol, setRol] = useState("");
+  const [origen, setOrigen] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,7 +27,7 @@ function RegistroForm() {
     if (!name || !email || !password) { setError("Completa todos los campos obligatorios"); return; }
     if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
     setLoading(true);
-    const { data, error: authError } = await signUp(email, password, name, empresa);
+    const { data, error: authError } = await signUp(email, password, name, empresa, { rol, origen });
     setLoading(false);
     if (authError) {
       if (authError.message?.includes("already registered")) {
@@ -44,6 +47,7 @@ function RegistroForm() {
   };
 
   const handleGoogle = async () => {
+    if (rol || origen) savePendingProfile({ rol, origen });
     const { error: authError } = await loginWithGoogle();
     if (authError) {
       setError("Error al conectar con Google. Intenta de nuevo.");
@@ -83,6 +87,23 @@ function RegistroForm() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+            <div>
+              <label htmlFor="reg-rol" className="block text-xs font-medium text-slate-600 mb-1">Me dedico a <span className="text-slate-400">(opcional)</span></label>
+              <select id="reg-rol" value={rol} onChange={(e) => setRol(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="">Seleccionar…</option>
+                {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="reg-origen" className="block text-xs font-medium text-slate-600 mb-1">¿Cómo nos conociste? <span className="text-slate-400">(opcional)</span></label>
+              <select id="reg-origen" value={origen} onChange={(e) => setOrigen(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="">Seleccionar…</option>
+                {ORIGENES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <p className="sm:col-span-2 text-xs text-slate-400">Nos ayuda a mejorar la herramienta para perfiles como el tuyo.</p>
+          </div>
           <button onClick={handleGoogle} className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-200 hover:border-slate-300 rounded-xl py-3 px-4 text-sm font-medium text-slate-700 transition mb-6">
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
