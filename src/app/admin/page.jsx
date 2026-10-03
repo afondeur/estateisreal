@@ -141,7 +141,7 @@ export default function AdminPage() {
           supabase.from("promo_redemptions").select("*").order("redeemed_at", { ascending: false }),
           supabase.from("feedback").select("*").order("created_at", { ascending: false }).limit(500),
           supabase.from("pricing_survey").select("*").order("created_at", { ascending: false }).limit(500),
-          supabase.from("profiles").select("id, email, nombre, rol, origen, tier, is_admin, pro_until, pro_source, stripe_subscription_id, created_at"),
+          supabase.from("profiles").select("id, email, nombre, rol, origen, tier, is_admin, is_internal, pro_until, pro_source, stripe_subscription_id, created_at"),
           supabase.from("analytics_events").select("event_type, user_id, created_at").gte("created_at", thirtyDaysAgo).limit(5000),
           supabase.from("proyectos").select("id, user_id, created_at"),
           supabase.from("market_intelligence").select("*").order("created_at", { ascending: false }).limit(5000),
